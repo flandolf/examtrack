@@ -23,7 +23,13 @@ export class RedisStore<T> implements KeyValueStore<T> {
   }
 }
 
+export function resolveRedisCredentials(env: NodeJS.ProcessEnv): { url: string; token: string } | undefined {
+  const url = env.UPSTASH_REDIS_REST_URL ?? env.KV_REST_API_URL
+  const token = env.UPSTASH_REDIS_REST_TOKEN ?? env.KV_REST_API_TOKEN
+  return url && token ? { url, token } : undefined
+}
+
 export function createRedisStore<T>(prefix: string): RedisStore<T> | undefined {
-  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) return undefined
-  return new RedisStore<T>(Redis.fromEnv(), prefix)
+  const credentials = resolveRedisCredentials(process.env)
+  return credentials ? new RedisStore<T>(new Redis(credentials), prefix) : undefined
 }

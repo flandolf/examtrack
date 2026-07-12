@@ -169,6 +169,25 @@ describe("exam analysis", () => {
     }
     expect(isAppData(v2)).toBe(true)
   })
+
+  test("accepts old mistakes without question text and validates new question text", () => {
+    const mistake = {
+      id: "mistake-1",
+      attemptId: attempt.id,
+      question: "Question 4b",
+      category: "Concept" as const,
+      explanation: "Missed the chain rule",
+      correction: "Apply the chain rule",
+      resolved: false,
+      createdAt: attempt.createdAt,
+      updatedAt: attempt.updatedAt,
+    }
+    const data = { schemaVersion: 2 as const, attempts: [attempt], mistakes: [mistake], trackedExamIds: [] }
+
+    expect(isAppData(data)).toBe(true)
+    expect(isAppData({ ...data, mistakes: [{ ...mistake, questionText: "Differentiate $e^{2x}$." }] })).toBe(true)
+    expect(isAppData({ ...data, mistakes: [{ ...mistake, questionText: 42 }] })).toBe(false)
+  })
 })
 
 const methods1: TimetableEntry = {

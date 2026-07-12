@@ -8,6 +8,7 @@ const MAX_IMAGE_BYTES = 3 * 1024 * 1024
 export type MistakeDraft = {
   attemptId: string
   question: string
+  questionText: string
   category: MistakeCategory
   explanation: string
   correction: string
@@ -50,10 +51,11 @@ export async function analyseMistakeImage(
   const mistakeSchema = jsonSchema<MistakeDraft>({
     type: "object",
     additionalProperties: false,
-    required: ["attemptId", "question", "category", "explanation", "correction"],
+    required: ["attemptId", "question", "questionText", "category", "explanation", "correction"],
     properties: {
       attemptId: { type: "string", enum: ["", ...attempts.map((attempt) => attempt.id)] },
       question: { type: "string", description: "Short question identifier, such as Question 4b" },
+      questionText: { type: "string", description: "The complete exam question, in Markdown with LaTeX where useful" },
       category: { type: "string", enum: [...MISTAKE_CATEGORIES] },
       explanation: { type: "string", description: "What the student did wrong, in concise Markdown with LaTeX where useful" },
       correction: { type: "string", description: "The correct method, in concise Markdown with LaTeX where useful" },
@@ -81,12 +83,13 @@ export async function analyseMistakeImage(
   })
 
   const draft = await result.output
-  if (!draft.question.trim() || !draft.explanation.trim() || !draft.correction.trim()) {
+  if (!draft.question.trim() || !draft.questionText.trim() || !draft.explanation.trim() || !draft.correction.trim()) {
     throw new Error("ChatGPT could not read enough of the image to fill the mistake.")
   }
   return {
     ...draft,
     question: draft.question.trim(),
+    questionText: draft.questionText.trim(),
     explanation: draft.explanation.trim(),
     correction: draft.correction.trim(),
   }

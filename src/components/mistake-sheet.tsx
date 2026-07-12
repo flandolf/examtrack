@@ -57,6 +57,7 @@ export function MistakeSheet({
   const auth = useLoginWithChatGPT()
   const [attemptId, setAttemptId] = useState(initialMistake?.attemptId ?? initialAttemptId ?? "")
   const [question, setQuestion] = useState(initialMistake?.question ?? "")
+  const [questionText, setQuestionText] = useState(initialMistake?.questionText ?? "")
   const [category, setCategory] = useState<MistakeCategory>(initialMistake?.category ?? "Concept")
   const [explanation, setExplanation] = useState(initialMistake?.explanation ?? "")
   const [correction, setCorrection] = useState(initialMistake?.correction ?? "")
@@ -74,6 +75,7 @@ export function MistakeSheet({
   function reset() {
     setAttemptId("")
     setQuestion("")
+    setQuestionText("")
     setCategory("Concept")
     setExplanation("")
     setCorrection("")
@@ -92,6 +94,7 @@ export function MistakeSheet({
       const draft = await analyseMistakeImage(image, attempts, selectedAttempt)
       if (draft.attemptId) setAttemptId(draft.attemptId)
       setQuestion(draft.question)
+      setQuestionText(draft.questionText)
       setCategory(draft.category)
       setExplanation(draft.explanation)
       setCorrection(draft.correction)
@@ -104,8 +107,8 @@ export function MistakeSheet({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!selectedAttempt || !question.trim() || !explanation.trim() || !correction.trim()) {
-      setError("Exam, question, mistake, and corrected method are required.")
+    if (!selectedAttempt || !question.trim() || !questionText.trim() || !explanation.trim() || !correction.trim()) {
+      setError("Exam, question number, question, mistake, and corrected method are required.")
       return
     }
     const timestamp = new Date().toISOString()
@@ -113,6 +116,7 @@ export function MistakeSheet({
       id: initialMistake?.id ?? crypto.randomUUID(),
       attemptId: selectedAttempt,
       question: question.trim(),
+      questionText: questionText.trim(),
       category,
       explanation: explanation.trim(),
       correction: correction.trim(),
@@ -202,10 +206,16 @@ export function MistakeSheet({
                 </Combobox>
               </Field>
               <Field>
-                <FieldLabel htmlFor="question">Question</FieldLabel>
+                <FieldLabel htmlFor="question">Question number</FieldLabel>
                 <Input id="question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Question 4b" />
               </Field>
             </div>
+
+            <Field>
+              <FieldLabel htmlFor="question-text">Question</FieldLabel>
+              <Textarea id="question-text" rows={4} value={questionText} onChange={(event) => setQuestionText(event.target.value)} placeholder="Enter the full question text." />
+              <MarkdownPreview>{questionText}</MarkdownPreview>
+            </Field>
 
             <Field>
               <FieldLabel>Category</FieldLabel>

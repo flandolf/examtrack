@@ -34,4 +34,15 @@ describe("sync merge", () => {
 
     expect(mergeCollection<Item>([], remote, tombstones)).toEqual([])
   })
+
+  test("preserves full question text in a synced mistake payload", () => {
+    const payload = {
+      id: "mistake-1",
+      updatedAt: "2026-07-12T04:00:00.000Z",
+      questionText: "Differentiate $e^{2x}$.",
+    }
+
+    expect(mergeCollection([], [{ id: payload.id, payload, updated_at: payload.updatedAt, deleted_at: null }], {}))
+      .toEqual([payload])
+  })
 })

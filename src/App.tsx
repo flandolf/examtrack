@@ -164,6 +164,7 @@ function MistakeList({ mistakes, attempts, onEdit, onToggle, onDelete }: { mista
             </CardHeader>
             <CardContent className="grid gap-4">
               <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+                {mistake.questionText ? <div><p className="mb-2 text-sm font-medium">Question</p><MarkdownPreview>{mistake.questionText}</MarkdownPreview></div> : null}
                 <div><p className="mb-2 text-sm font-medium">What went wrong</p><MarkdownPreview>{mistake.explanation}</MarkdownPreview></div>
                 <div><p className="mb-2 text-sm font-medium">Corrected method</p><MarkdownPreview>{mistake.correction}</MarkdownPreview></div>
               </Suspense>

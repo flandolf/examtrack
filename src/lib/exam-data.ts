@@ -51,6 +51,7 @@ export type Mistake = {
   id: string
   attemptId: string
   question: string
+  questionText?: string
   category: MistakeCategory
   explanation: string
   correction: string
@@ -446,6 +447,7 @@ export function isAppData(value: unknown): value is AppData {
         typeof mistake.attemptId === "string" &&
         attemptIds.has(mistake.attemptId) &&
         typeof mistake.question === "string" &&
+        (mistake.questionText === undefined || typeof mistake.questionText === "string") &&
         MISTAKE_CATEGORIES.includes(mistake.category) &&
         typeof mistake.explanation === "string" &&
         typeof mistake.correction === "string" &&

@@ -1,0 +1,202 @@
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react"
+import type { User } from "@supabase/supabase-js"
+import { EMPTY_APP_DATA, migrateAppData, type AppData, type ExamAttempt, type Mistake } from "@/lib/exam-data"
+import { supabase } from "@/lib/supabase"
+
+const TOMBSTONE_KEY = "examtrack:sync:tombstones:v1"
+const OWNER_KEY = "examtrack:sync:owner:v1"
+
+type Collection = "attempts" | "mistakes"
+type Tombstones = Record<Collection, Record<string, string>>
+type RemoteRow = {
+  id: string
+  payload: unknown | null
+  updated_at: string
+  deleted_at: string | null
+}
+
+const EMPTY_TOMBSTONES = (): Tombstones => ({ attempts: {}, mistakes: {} })
+
+function loadTombstones(): Tombstones {
+  try {
+    const value = JSON.parse(localStorage.getItem(TOMBSTONE_KEY) ?? "null") as Partial<Tombstones> | null
+    return {
+      attempts: value?.attempts && typeof value.attempts === "object" ? value.attempts : {},
+      mistakes: value?.mistakes && typeof value.mistakes === "object" ? value.mistakes : {},
+    }
+  } catch {
+    return EMPTY_TOMBSTONES()
+  }
+}
+
+function saveTombstones(value: Tombstones) {
+  localStorage.setItem(TOMBSTONE_KEY, JSON.stringify(value))
+}
+
+export function recordLocalChanges(previous: AppData, next: AppData, now = new Date().toISOString()) {
+  const tombstones = loadTombstones()
+  for (const collection of ["attempts", "mistakes"] as const) {
+    const previousIds = new Set(previous[collection].map(({ id }) => id))
+    const nextIds = new Set(next[collection].map(({ id }) => id))
+    for (const id of previousIds) if (!nextIds.has(id)) tombstones[collection][id] = now
+    for (const id of nextIds) if (!previousIds.has(id)) delete tombstones[collection][id]
+  }
+  saveTombstones(tombstones)
+}
+
+export function mergeCollection<T extends { id: string; updatedAt: string }>(
+  local: T[],
+  remote: Array<RemoteRow & { payload: T | null }>,
+  tombstones: Record<string, string>,
+): T[] {
+  const merged = new Map(local.map((item) => [item.id, item]))
+  for (const row of remote) {
+    const localVersion = merged.get(row.id)?.updatedAt ?? tombstones[row.id] ?? ""
+    const remoteVersion = row.deleted_at ?? row.updated_at
+    if (remoteVersion <= localVersion) continue
+    if (row.deleted_at) {
+      merged.delete(row.id)
+      tombstones[row.id] = remoteVersion
+    } else if (row.payload) {
+      merged.set(row.id, row.payload)
+      delete tombstones[row.id]
+    }
+  }
+  return [...merged.values()]
+}
+
+async function syncCollection<T extends { id: string; updatedAt: string }>(
+  collection: Collection,
+  userId: string,
+  local: T[],
+  remote: Array<RemoteRow & { payload: T | null }>,
+  tombstones: Record<string, string>,
+) {
+  if (!supabase) return
+  const merged = mergeCollection(local, remote, tombstones)
+  const rows = [
+    ...merged.map((item) => ({
+      user_id: userId,
+      id: item.id,
+      payload: item,
+      updated_at: item.updatedAt,
+      deleted_at: null,
+    })),
+    ...Object.entries(tombstones).map(([id, deletedAt]) => ({
+      user_id: userId,
+      id,
+      payload: null,
+      updated_at: deletedAt,
+      deleted_at: deletedAt,
+    })),
+  ]
+  if (rows.length) {
+    const { error } = await supabase.from(collection).upsert(rows, { onConflict: "user_id,id" })
+    if (error) throw error
+  }
+  return merged
+}
+
+export async function syncAppData(data: AppData, userId: string): Promise<AppData> {
+  if (!supabase) return data
+  const [attemptResult, mistakeResult] = await Promise.all([
+    supabase.from("attempts").select("id,payload,updated_at,deleted_at"),
+    supabase.from("mistakes").select("id,payload,updated_at,deleted_at"),
+  ])
+  if (attemptResult.error) throw attemptResult.error
+  if (mistakeResult.error) throw mistakeResult.error
+
+  const activeAttempts = attemptResult.data.filter((row) => !row.deleted_at).map((row) => row.payload)
+  const activeMistakes = mistakeResult.data.filter((row) => !row.deleted_at).map((row) => row.payload)
+  const validated = migrateAppData({
+    schemaVersion: 2,
+    attempts: activeAttempts,
+    mistakes: activeMistakes,
+    trackedExamIds: [],
+  })
+  if (!validated) throw new Error("Synced data is invalid.")
+
+  const attemptsById = new Map(validated.attempts.map((item) => [item.id, item]))
+  const mistakesById = new Map(validated.mistakes.map((item) => [item.id, item]))
+  const attemptRows = attemptResult.data.map((row) => ({ ...row, payload: row.deleted_at ? null : attemptsById.get(row.id) ?? null }))
+  const mistakeRows = mistakeResult.data.map((row) => ({ ...row, payload: row.deleted_at ? null : mistakesById.get(row.id) ?? null }))
+  const tombstones = loadTombstones()
+  const [attempts, mistakes] = await Promise.all([
+    syncCollection<ExamAttempt>("attempts", userId, data.attempts, attemptRows, tombstones.attempts),
+    syncCollection<Mistake>("mistakes", userId, data.mistakes, mistakeRows, tombstones.mistakes),
+  ])
+  saveTombstones(tombstones)
+  return { ...data, attempts: attempts ?? data.attempts, mistakes: mistakes ?? data.mistakes }
+}
+
+export type SyncStatus = "unconfigured" | "signed-out" | "syncing" | "synced" | "error"
+
+export function useSupabaseSync(data: AppData, setData: Dispatch<SetStateAction<AppData>>) {
+  const [user, setUser] = useState<User | null>(null)
+  const [status, setStatus] = useState<SyncStatus>(supabase ? "signed-out" : "unconfigured")
+  const previous = useRef(data)
+
+  useEffect(() => {
+    recordLocalChanges(previous.current, data)
+    previous.current = data
+    if (!supabase || !user) return
+    let cancelled = false
+    const timeout = window.setTimeout(() => {
+      setStatus("syncing")
+      syncAppData(data, user.id)
+        .then((merged) => {
+          if (cancelled) return
+          setData((current) => JSON.stringify(current) === JSON.stringify(merged) ? current : merged)
+          setStatus("synced")
+        })
+        .catch(() => {
+          if (!cancelled) setStatus("error")
+        })
+    }, 300)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeout)
+    }
+  }, [data, setData, user])
+
+  useEffect(() => {
+    if (!supabase) return
+    const acceptUser = (current: User | null) => {
+      if (current) {
+        const owner = localStorage.getItem(OWNER_KEY)
+        if (owner && owner !== current.id) {
+          localStorage.removeItem(TOMBSTONE_KEY)
+          previous.current = EMPTY_APP_DATA
+          setData(EMPTY_APP_DATA)
+        }
+        localStorage.setItem(OWNER_KEY, current.id)
+      }
+      setUser(current)
+    }
+    supabase.auth.getUser().then(({ data: { user: current } }) => acceptUser(current))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      acceptUser(session?.user ?? null)
+      setStatus(session ? "syncing" : "signed-out")
+    })
+    return () => subscription.unsubscribe()
+  }, [setData])
+
+  return {
+    configured: Boolean(supabase),
+    user,
+    status,
+    signIn: async (email: string) => {
+      if (!supabase) throw new Error("Supabase is not configured.")
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin },
+      })
+      if (error) throw error
+    },
+    signOut: async () => {
+      if (!supabase) return
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    },
+  }
+}

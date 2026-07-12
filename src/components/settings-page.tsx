@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react"
 import { createChatGPTProxyProvider } from "@opencoredev/loginwithchatgpt-ai"
 import { useLoginWithChatGPT } from "@opencoredev/loginwithchatgpt-react"
-import { CheckCircle2, Copy, ExternalLink, LogOut, RefreshCw, Sparkles } from "lucide-react"
+import { CheckCircle2, Cloud, Copy, ExternalLink, LogOut, RefreshCw, Sparkles } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -16,6 +17,7 @@ import {
   type AISettings,
   type ReasoningEffort,
 } from "@/lib/ai-settings"
+import type { useSupabaseSync } from "@/lib/sync"
 
 const REASONING_LABELS: Record<ReasoningEffort, string> = {
   none: "None",
@@ -25,8 +27,10 @@ const REASONING_LABELS: Record<ReasoningEffort, string> = {
   xhigh: "Extra high",
 }
 
-export function SettingsPage() {
+export function SettingsPage({ sync }: { sync: ReturnType<typeof useSupabaseSync> }) {
   const auth = useLoginWithChatGPT()
+  const [email, setEmail] = useState("")
+  const [accountMessage, setAccountMessage] = useState<string | null>(null)
   const [settings, setSettings] = useState<AISettings>(() => loadAISettings())
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
@@ -59,7 +63,40 @@ export function SettingsPage() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader title="Settings" description="Manage the ChatGPT connection and how AI analyzes mistake photos." />
+      <PageHeader title="Settings" description="Manage sync, the ChatGPT connection, and mistake analysis." />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>ExamTrack account</CardTitle>
+          <CardDescription>Sign in by email to sync attempts and mistakes across devices.</CardDescription>
+          {sync.user ? <CardAction><Badge variant="secondary"><Cloud />{sync.status === "syncing" ? "Syncing" : sync.status === "error" ? "Sync failed" : "Synced"}</Badge></CardAction> : null}
+        </CardHeader>
+        <CardContent>
+          {!sync.configured ? (
+            <p className="text-sm text-muted-foreground">Add the Supabase URL and publishable key to enable account sync.</p>
+          ) : sync.user ? (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div><p className="font-medium">{sync.user.email}</p><p className="text-sm text-muted-foreground">Local changes continue saving if sync is temporarily unavailable.</p></div>
+              <Button variant="outline" onClick={() => void sync.signOut()}><LogOut />Sign out</Button>
+            </div>
+          ) : (
+            <form className="flex max-w-lg flex-col gap-3 sm:flex-row" onSubmit={async (event) => {
+              event.preventDefault()
+              setAccountMessage(null)
+              try {
+                await sync.signIn(email)
+                setAccountMessage("Check your email for the sign-in link.")
+              } catch (error) {
+                setAccountMessage(error instanceof Error ? error.message : "Could not send the sign-in link.")
+              }
+            }}>
+              <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" aria-label="Email address" required />
+              <Button type="submit"><Cloud />Send sign-in link</Button>
+            </form>
+          )}
+          {accountMessage ? <p role="status" className="mt-3 text-sm text-muted-foreground">{accountMessage}</p> : null}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

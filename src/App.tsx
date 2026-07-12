@@ -54,6 +54,7 @@ import {
   type Mistake,
 } from "@/lib/exam-data"
 import { downloadAppData, loadAppData, parseAppDataFile, saveAppData } from "@/lib/storage"
+import { useSupabaseSync } from "@/lib/sync"
 import { loadTimetable, suggestTimetableForAttempt, formatExamLabel, type Timetable } from "@/lib/timetable"
 import { ExamTrackerPicker } from "@/components/exam-tracker-picker"
 
@@ -89,7 +90,7 @@ const NAVIGATION = [
 ]
 const SETTINGS_ITEM = { id: "settings" as const, label: "Settings", icon: Settings2 }
 
-function AppSidebar({ view, data, onViewChange }: { view: View; data: AppData; onViewChange: (view: View) => void }) {
+function AppSidebar({ view, data, syncLabel, onViewChange }: { view: View; data: AppData; syncLabel: string; onViewChange: (view: View) => void }) {
   const { setOpenMobile } = useSidebar()
   return (
     <Sidebar collapsible="icon">
@@ -140,7 +141,7 @@ function AppSidebar({ view, data, onViewChange }: { view: View; data: AppData; o
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <span className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">Stored on this device</span>
+        <span className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">{syncLabel}</span>
       </SidebarFooter>
     </Sidebar>
   )
@@ -210,6 +211,7 @@ export default function App() {
   const [timetable, setTimetable] = useState<Timetable | null>(null)
   const [trackerOpen, setTrackerOpen] = useState(false)
   const importInput = useRef<HTMLInputElement>(null)
+  const sync = useSupabaseSync(data, setData)
 
   const subjectExamIds = useMemo(() => {
     if (!timetable) return []
@@ -312,7 +314,14 @@ export default function App() {
     toast("Exam deleted", {
       action: {
         label: "Undo",
-        onClick: () => setData((current) => ({ ...current, attempts: [...current.attempts, attempt], mistakes: [...current.mistakes, ...related] })),
+        onClick: () => {
+          const updatedAt = new Date().toISOString()
+          setData((current) => ({
+            ...current,
+            attempts: [...current.attempts, { ...attempt, updatedAt }],
+            mistakes: [...current.mistakes, ...related.map((mistake) => ({ ...mistake, updatedAt }))],
+          }))
+        },
       },
     })
   }
@@ -326,7 +335,7 @@ export default function App() {
 
   function deleteMistake(mistake: Mistake) {
     setData((current) => ({ ...current, mistakes: current.mistakes.filter((item) => item.id !== mistake.id) }))
-    toast("Mistake deleted", { action: { label: "Undo", onClick: () => setData((current) => ({ ...current, mistakes: [...current.mistakes, mistake] })) } })
+    toast("Mistake deleted", { action: { label: "Undo", onClick: () => setData((current) => ({ ...current, mistakes: [...current.mistakes, { ...mistake, updatedAt: new Date().toISOString() }] })) } })
   }
 
   function toggleTrackedExam(id: string) {
@@ -367,7 +376,7 @@ export default function App() {
   return (
     <SidebarProvider>
       <a href="#main-content" className="fixed left-2 top-2 z-50 -translate-y-20 rounded-md bg-background px-3 py-2 text-sm shadow focus:translate-y-0">Skip to content</a>
-      <AppSidebar view={view} data={data} onViewChange={setView} />
+      <AppSidebar view={view} data={data} syncLabel={sync.user ? "Synced with Supabase" : "Stored on this device"} onViewChange={setView} />
       <SidebarInset className="min-w-0">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80">
           <SidebarTrigger />
@@ -407,7 +416,7 @@ export default function App() {
           {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onToggle={toggleMistake} onDelete={deleteMistake} /> : null}
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer references={references} onSave={saveTimedAttempt} /></Suspense> : null}
           {view === "vcaa" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><VcaaExplorer references={references} attempts={data.attempts} /></Suspense> : null}
-          {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage /></Suspense> : null}
+          {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage sync={sync} /></Suspense> : null}
         </main>
       </SidebarInset>
       {examOpen ? (

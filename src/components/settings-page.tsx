@@ -90,7 +90,7 @@ export function SettingsPage() {
               <p className="text-sm">Enter code <strong className="font-mono">{auth.userCode}</strong> in the ChatGPT authorization window.</p>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => void auth.copyCode()}><Copy />{auth.copied ? "Copied" : "Copy code"}</Button>
-                <Button variant="outline" onClick={auth.reopen}><ExternalLink />Reopen authorization</Button>
+                <Button variant="outline" render={<a href={auth.verificationUrl} target="_blank" rel="noopener noreferrer" />}><ExternalLink />Reopen authorization</Button>
               </div>
             </div>
           ) : null}
@@ -101,7 +101,7 @@ export function SettingsPage() {
                 Connecting lets ExamTrack spend from your ChatGPT plan for AI requests. Prompts and mistake photos pass through this server; ExamTrack never receives your password. Disconnecting deletes the server session.
               </p>
               <div>
-                <Button disabled={auth.isConnecting} onClick={() => void auth.login()}>
+                <Button disabled={auth.isConnecting} onClick={() => void auth.login({ popup: window.open("about:blank", "_blank") })}>
                   <Sparkles />{auth.isConnecting ? "Connecting…" : "I understand, connect ChatGPT"}
                 </Button>
               </div>

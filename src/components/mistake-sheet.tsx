@@ -171,7 +171,7 @@ export function MistakeSheet({
                     <p className="text-sm">Enter <strong className="font-mono">{auth.userCode}</strong> in the ChatGPT authorization window.</p>
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" size="sm" variant="outline" onClick={() => void auth.copyCode()}><Copy />{auth.copied ? "Copied" : "Copy code"}</Button>
-                      <Button type="button" size="sm" variant="outline" onClick={auth.reopen}><ExternalLink />Reopen</Button>
+                      <Button size="sm" variant="outline" render={<a href={auth.verificationUrl} target="_blank" rel="noopener noreferrer" />}><ExternalLink />Reopen</Button>
                     </div>
                   </div>
                 ) : null}
@@ -180,7 +180,7 @@ export function MistakeSheet({
                   <div className="grid gap-3">
                     <p className="text-sm leading-5 text-muted-foreground">AI requests use your ChatGPT plan. The photo passes through this server; ExamTrack never receives your password, and disconnecting deletes the session.</p>
                     <div>
-                      <Button type="button" size="sm" variant="outline" disabled={auth.isConnecting} onClick={() => void auth.login()}>
+                      <Button type="button" size="sm" variant="outline" disabled={auth.isConnecting} onClick={() => void auth.login({ popup: window.open("about:blank", "_blank") })}>
                         <Sparkles />{auth.isConnecting ? "Connecting…" : "I understand, connect ChatGPT"}
                       </Button>
                     </div>

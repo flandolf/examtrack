@@ -30,6 +30,8 @@ const REASONING_LABELS: Record<ReasoningEffort, string> = {
 export function SettingsPage({ sync }: { sync: ReturnType<typeof useSupabaseSync> }) {
   const auth = useLoginWithChatGPT()
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [accountLoading, setAccountLoading] = useState(false)
   const [accountMessage, setAccountMessage] = useState<string | null>(null)
   const [settings, setSettings] = useState<AISettings>(() => loadAISettings())
   const [models, setModels] = useState<string[]>([])
@@ -68,7 +70,7 @@ export function SettingsPage({ sync }: { sync: ReturnType<typeof useSupabaseSync
       <Card>
         <CardHeader>
           <CardTitle>ExamTrack account</CardTitle>
-          <CardDescription>Sign in by email to sync attempts and mistakes across devices.</CardDescription>
+          <CardDescription>Sign in with your email and password to sync attempts and mistakes across devices.</CardDescription>
           {sync.user ? <CardAction><Badge variant="secondary"><Cloud />{sync.status === "syncing" ? "Syncing" : sync.status === "error" ? "Sync failed" : "Synced"}</Badge></CardAction> : null}
         </CardHeader>
         <CardContent>
@@ -80,18 +82,36 @@ export function SettingsPage({ sync }: { sync: ReturnType<typeof useSupabaseSync
               <Button variant="outline" onClick={() => void sync.signOut()}><LogOut />Sign out</Button>
             </div>
           ) : (
-            <form className="flex max-w-lg flex-col gap-3 sm:flex-row" onSubmit={async (event) => {
+            <form className="grid max-w-md gap-3" onSubmit={async (event) => {
               event.preventDefault()
+              setAccountLoading(true)
               setAccountMessage(null)
               try {
-                await sync.signIn(email)
-                setAccountMessage("Check your email for the sign-in link.")
+                await sync.signIn(email, password)
               } catch (error) {
-                setAccountMessage(error instanceof Error ? error.message : "Could not send the sign-in link.")
+                setAccountMessage(error instanceof Error ? error.message : "Could not sign in.")
+              } finally {
+                setAccountLoading(false)
               }
             }}>
               <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" aria-label="Email address" required />
-              <Button type="submit"><Cloud />Send sign-in link</Button>
+              <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" aria-label="Password" minLength={8} required />
+              <div className="flex gap-2">
+                <Button type="submit" disabled={accountLoading}><Cloud />Sign in</Button>
+                <Button type="button" variant="outline" disabled={accountLoading} onClick={async (event) => {
+                  if (!event.currentTarget.form?.reportValidity()) return
+                  setAccountLoading(true)
+                  setAccountMessage(null)
+                  try {
+                    const signedIn = await sync.signUp(email, password)
+                    if (!signedIn) setAccountMessage("Disable Confirm email in Supabase Auth settings to create accounts without callbacks.")
+                  } catch (error) {
+                    setAccountMessage(error instanceof Error ? error.message : "Could not create the account.")
+                  } finally {
+                    setAccountLoading(false)
+                  }
+                }}>Create account</Button>
+              </div>
             </form>
           )}
           {accountMessage ? <p role="status" className="mt-3 text-sm text-muted-foreground">{accountMessage}</p> : null}

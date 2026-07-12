@@ -14,9 +14,9 @@ bun run dev
 
 1. Create a Supabase project and run `supabase/migrations/20260712064624_initial.sql`.
 2. Copy `.env.example` to `.env.local` and add the project URL and publishable key from the Connect dialog.
-3. Add the deployed app URL and `http://localhost:5173` to the Auth redirect URLs in Supabase.
+3. In Authentication → Providers → Email, disable **Confirm email** for password-only signup without callbacks.
 
-Attempts and mistakes stay available in local storage and sync after an email-link sign-in. Never put a secret or service-role key in the Vite environment variables.
+Attempts and mistakes stay available in local storage and sync after email/password sign-in. Never put a secret or service-role key in the Vite environment variables.
 
 Student data stays in browser storage. Use the app menu to export or import a validated JSON backup.
 Mistake photos sent to ChatGPT pass through the local server and are not saved by ExamTrack.

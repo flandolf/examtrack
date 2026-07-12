@@ -185,13 +185,16 @@ export function useSupabaseSync(data: AppData, setData: Dispatch<SetStateAction<
     configured: Boolean(supabase),
     user,
     status,
-    signIn: async (email: string) => {
+    signIn: async (email: string, password: string) => {
       if (!supabase) throw new Error("Supabase is not configured.")
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.origin },
-      })
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
+    },
+    signUp: async (email: string, password: string) => {
+      if (!supabase) throw new Error("Supabase is not configured.")
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      if (error) throw error
+      return Boolean(data.session)
     },
     signOut: async () => {
       if (!supabase) return

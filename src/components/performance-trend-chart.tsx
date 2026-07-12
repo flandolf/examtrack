@@ -13,10 +13,10 @@ import {
 } from "@/lib/exam-data"
 
 const chartConfig = {
-  percentage: { label: "Mark %", color: "var(--chart-2)" },
-  average: { label: "Overall average", color: "var(--chart-4)" },
-  vcaaMeanPercentage: { label: "Est. VCAA mean", color: "var(--chart-mean)" },
-  aPlusCutoffPercentage: { label: "Official A+ cutoff", color: "var(--chart-deviation)" },
+  percentage: { label: "Mark %", color: "#16a34a" },
+  average: { label: "Overall average", color: "#ca8a04" },
+  vcaaMeanPercentage: { label: "Est. VCAA mean", color: "#2563eb" },
+  aPlusCutoffPercentage: { label: "Official A+ cutoff", color: "#dc2626" },
 }
 
 type TrendPoint = {

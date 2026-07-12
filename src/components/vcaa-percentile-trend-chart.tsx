@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { buildAttemptBenchmarks, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
 
 const chartConfig = {
-  percentile: { label: "Estimated percentile", color: "var(--chart-median)" },
+  percentile: { label: "Estimated percentile", color: "#16a34a" },
 }
 
 function formatTick(value: number) {

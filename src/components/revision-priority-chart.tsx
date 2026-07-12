@@ -4,8 +4,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import type { Mistake } from "@/lib/exam-data"
 
 const chartConfig = {
-  unresolved: { label: "Unresolved", color: "var(--chart-4)" },
-  resolved: { label: "Resolved", color: "var(--chart-1)" },
+  unresolved: { label: "Unresolved", color: "#dc2626" },
+  resolved: { label: "Resolved", color: "#16a34a" },
 }
 
 // Exported for the small ranking self-check; the UI consumes the same function.

@@ -27,9 +27,9 @@ import {
 } from "@/lib/exam-data"
 
 const chartConfig = {
-  aPlusCutoffPercentage: { label: "A+ cutoff", color: "var(--chart-3)" },
-  meanPercentage: { label: "Estimated mean", color: "var(--chart-mean)" },
-  medianPercentage: { label: "Estimated median", color: "var(--chart-median)" },
+  aPlusCutoffPercentage: { label: "A+ cutoff", color: "#dc2626" },
+  meanPercentage: { label: "Estimated mean", color: "#2563eb" },
+  medianPercentage: { label: "Estimated median", color: "#ca8a04" },
 } satisfies ChartConfig
 
 function formatPercent(value: number | null) {

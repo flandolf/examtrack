@@ -21,8 +21,8 @@ import {
 } from "@/lib/exam-data"
 
 const chartConfig = {
-  density: { label: "Cohort density", color: "var(--chart-1)" },
-  attempt: { label: "Your attempt", color: "var(--chart-2)" },
+  density: { label: "Cohort density", color: "#2563eb" },
+  attempt: { label: "Your attempt", color: "#16a34a" },
 }
 
 type DistributionPoint = {
@@ -161,12 +161,12 @@ export function AttemptDistributionChart({
   }
 
   const distributionLines = [
-    { key: "mean", score: stats.mean, stroke: "var(--chart-mean)", dash: undefined },
-    { key: "median", score: stats.median, stroke: "var(--chart-median)", dash: "5 3" },
+    { key: "mean", score: stats.mean, stroke: "#2563eb", dash: undefined },
+    { key: "median", score: stats.median, stroke: "#ca8a04", dash: "5 3" },
     ...[1, 2, 3].flatMap((deviation) => [-1, 1].map((direction) => ({
       key: `${direction * deviation}sd`,
       score: stats.mean + direction * deviation * stats.stdDev,
-      stroke: "var(--chart-deviation)",
+      stroke: "#ea580c",
       dash: "2 4",
     }))),
   ].filter((line) => line.score >= 0 && line.score <= reference.maxScore)

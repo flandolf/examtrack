@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test"
-import { RedisStore } from "../server/redis-store"
+import { RedisStore, resolveRedisCredentials } from "../server/redis-store"
+
+test("accepts current Upstash and Vercel KV REST variable names", () => {
+  expect(resolveRedisCredentials({ UPSTASH_REDIS_REST_URL: "https://upstash", UPSTASH_REDIS_REST_TOKEN: "upstash-token" })).toEqual({ url: "https://upstash", token: "upstash-token" })
+  expect(resolveRedisCredentials({ KV_REST_API_URL: "https://vercel-kv", KV_REST_API_TOKEN: "kv-token" })).toEqual({ url: "https://vercel-kv", token: "kv-token" })
+  expect(resolveRedisCredentials({ KV_REST_API_URL: "https://vercel-kv", KV_REST_API_READ_ONLY_TOKEN: "read-only" })).toBeUndefined()
+})
 
 test("adapts the Login with ChatGPT store contract to Redis", async () => {
   const values = new Map<string, unknown>()

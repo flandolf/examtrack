@@ -17,7 +17,7 @@ For a production build, set a stable `LWC_SECRET`, then run `bun run build` foll
 
 ## Vercel
 
-Import the GitHub repository into Vercel, add a stable `LWC_SECRET`, and connect an Upstash Redis database from the Vercel Marketplace. The integration must provide `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`; Vercel deployments fail fast without durable session storage. Redeploy after adding the variables.
+Import the GitHub repository into Vercel, add a stable `LWC_SECRET`, and connect an Upstash Redis database from the Vercel Marketplace. ExamTrack accepts either `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` or Vercel's `KV_REST_API_URL` + writable `KV_REST_API_TOKEN`; Vercel deployments fail fast without durable session storage. Redeploy after adding the variables.
 
 ## Checks
 

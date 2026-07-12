@@ -8,6 +8,7 @@ import {
   MoreHorizontal,
   NotebookPen,
   Plus,
+  Settings2,
   Upload,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -74,8 +75,11 @@ const VcaaExplorer = lazy(() =>
 const ExamTimer = lazy(() =>
   import("@/components/exam-timer").then((module) => ({ default: module.ExamTimer })),
 )
+const SettingsPage = lazy(() =>
+  import("@/components/settings-page").then((module) => ({ default: module.SettingsPage })),
+)
 
-type View = "dashboard" | "timer" | "mistakes" | "vcaa"
+type View = "dashboard" | "timer" | "mistakes" | "vcaa" | "settings"
 
 const NAVIGATION = [
   { id: "dashboard" as const, label: "Dashboard", icon: ChartNoAxesCombined },
@@ -83,6 +87,7 @@ const NAVIGATION = [
   { id: "mistakes" as const, label: "Mistakes", icon: NotebookPen },
   { id: "vcaa" as const, label: "VCAA data", icon: LibraryBig },
 ]
+const SETTINGS_ITEM = { id: "settings" as const, label: "Settings", icon: Settings2 }
 
 function AppSidebar({ view, data, onViewChange }: { view: View; data: AppData; onViewChange: (view: View) => void }) {
   const { setOpenMobile } = useSidebar()
@@ -119,8 +124,23 @@ function AppSidebar({ view, data, onViewChange }: { view: View; data: AppData; o
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="text-xs text-muted-foreground">
-        <span className="px-2 group-data-[collapsible=icon]:hidden">Stored on this device</span>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={view === SETTINGS_ITEM.id}
+              tooltip={SETTINGS_ITEM.label}
+              onClick={() => {
+                onViewChange(SETTINGS_ITEM.id)
+                setOpenMobile(false)
+              }}
+            >
+              <SETTINGS_ITEM.icon />
+              <span>{SETTINGS_ITEM.label}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <span className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">Stored on this device</span>
       </SidebarFooter>
     </Sidebar>
   )
@@ -351,7 +371,7 @@ export default function App() {
       <SidebarInset className="min-w-0">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80">
           <SidebarTrigger />
-          <span className="text-sm font-medium">{NAVIGATION.find((item) => item.id === view)?.label}</span>
+          <span className="text-sm font-medium">{[...NAVIGATION, SETTINGS_ITEM].find((item) => item.id === view)?.label}</span>
           <div className="ml-auto flex gap-1">
             <ModeToggle />
             <input ref={importInput} className="sr-only" type="file" accept="application/json" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importData(file); event.currentTarget.value = "" }} />
@@ -387,6 +407,7 @@ export default function App() {
           {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onToggle={toggleMistake} onDelete={deleteMistake} /> : null}
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer references={references} onSave={saveTimedAttempt} /></Suspense> : null}
           {view === "vcaa" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><VcaaExplorer references={references} attempts={data.attempts} /></Suspense> : null}
+          {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage /></Suspense> : null}
         </main>
       </SidebarInset>
       {examOpen ? (

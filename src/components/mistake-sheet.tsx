@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react"
+import { useLoginWithChatGPT } from "@opencoredev/loginwithchatgpt-react"
+import { CheckCircle2, Copy, ExternalLink, LogOut, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -33,6 +35,7 @@ import {
   type Mistake,
   type MistakeCategory,
 } from "@/lib/exam-data"
+import { analyseMistakeImage, validateMistakeImage } from "@/lib/mistake-ai"
 
 type MistakeSheetProps = {
   open: boolean
@@ -51,11 +54,14 @@ export function MistakeSheet({
   onOpenChange,
   onSave,
 }: MistakeSheetProps) {
+  const auth = useLoginWithChatGPT()
   const [attemptId, setAttemptId] = useState(initialMistake?.attemptId ?? initialAttemptId ?? "")
   const [question, setQuestion] = useState(initialMistake?.question ?? "")
   const [category, setCategory] = useState<MistakeCategory>(initialMistake?.category ?? "Concept")
   const [explanation, setExplanation] = useState(initialMistake?.explanation ?? "")
   const [correction, setCorrection] = useState(initialMistake?.correction ?? "")
+  const [image, setImage] = useState<File | null>(null)
+  const [analysing, setAnalysing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const selectedAttempt = attemptId || initialAttemptId || ""
@@ -71,7 +77,29 @@ export function MistakeSheet({
     setCategory("Concept")
     setExplanation("")
     setCorrection("")
+    setImage(null)
     setError(null)
+  }
+
+  async function analyse() {
+    if (!image) return
+    const validationError = validateMistakeImage(image)
+    if (validationError) return setError(validationError)
+
+    setAnalysing(true)
+    setError(null)
+    try {
+      const draft = await analyseMistakeImage(image, attempts, selectedAttempt)
+      if (draft.attemptId) setAttemptId(draft.attemptId)
+      setQuestion(draft.question)
+      setCategory(draft.category)
+      setExplanation(draft.explanation)
+      setCorrection(draft.correction)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not analyse this image.")
+    } finally {
+      setAnalysing(false)
+    }
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -107,6 +135,61 @@ export function MistakeSheet({
         </SheetHeader>
         <form id="mistake-form" className="px-4 pb-4" onSubmit={submit}>
           <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="mistake-image">Question and working photo</FieldLabel>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  id="mistake-image"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(event) => {
+                    setImage(event.target.files?.[0] ?? null)
+                    setError(null)
+                  }}
+                />
+                <Button type="button" variant="secondary" disabled={!image || analysing || !auth.isAuthenticated} onClick={() => void analyse()}>
+                  <Sparkles />{analysing ? "Analysing…" : "Fill with AI"}
+                </Button>
+              </div>
+              <FieldDescription>Upload or take a photo up to 3 MB. Review the generated fields before saving.</FieldDescription>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                {auth.status === "loading" ? <p className="text-sm text-muted-foreground">Checking ChatGPT connection…</p> : null}
+
+                {auth.isAuthenticated ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <CheckCircle2 className="size-4 shrink-0" />
+                      <span className="truncate text-sm font-medium">Connected{auth.user?.email ? ` as ${auth.user.email}` : ""}</span>
+                    </div>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => void auth.logout()}><LogOut />Disconnect</Button>
+                  </div>
+                ) : null}
+
+                {auth.status === "pending" ? (
+                  <div className="grid gap-3">
+                    <p className="text-sm">Enter <strong className="font-mono">{auth.userCode}</strong> in the ChatGPT authorization window.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant="outline" onClick={() => void auth.copyCode()}><Copy />{auth.copied ? "Copied" : "Copy code"}</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={auth.reopen}><ExternalLink />Reopen</Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {auth.status !== "loading" && !auth.isAuthenticated && auth.status !== "pending" ? (
+                  <div className="grid gap-3">
+                    <p className="text-sm leading-5 text-muted-foreground">AI requests use your ChatGPT plan. The photo passes through this server; ExamTrack never receives your password, and disconnecting deletes the session.</p>
+                    <div>
+                      <Button type="button" size="sm" variant="outline" disabled={auth.isConnecting} onClick={() => void auth.login()}>
+                        <Sparkles />{auth.isConnecting ? "Connecting…" : "I understand, connect ChatGPT"}
+                      </Button>
+                    </div>
+                    {auth.error ? <p role="alert" className="text-sm text-destructive">{auth.error}</p> : null}
+                  </div>
+                ) : null}
+              </div>
+            </Field>
+
             <div className="grid gap-5 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="mistake-exam">Exam</FieldLabel>

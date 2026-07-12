@@ -9,3 +9,14 @@ test("renders Markdown with valid math and keeps invalid LaTeX non-fatal", () =>
 
   expect(() => renderToStaticMarkup(<MarkdownPreview>{"Broken $\\notacommand{$"}</MarkdownPreview>)).not.toThrow()
 })
+
+test("renders LaTeX parenthesis and bracket delimiters", () => {
+  const markup = renderToStaticMarkup(
+    <MarkdownPreview>{"Inline \\(f(x)=x^{1/3}\\) and display \\[x^2+1\\]"}</MarkdownPreview>,
+  )
+
+  expect(markup).toContain("katex")
+  expect(markup).toContain("katex-display")
+  expect(markup).not.toContain("\\(f(x)")
+  expect(markup).not.toContain("\\[x^2")
+})

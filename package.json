@@ -6,14 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "start": "NODE_ENV=production bun server.ts",
     "lint": "oxlint",
     "test": "bun test",
     "vcaa:import": "bun vcaa/import-all-grade-distributions.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.11",
     "@base-ui/react": "^1.6.0",
     "@fontsource-variable/geist": "^5.2.9",
+    "@opencoredev/loginwithchatgpt-ai": "^0.2.0",
+    "@opencoredev/loginwithchatgpt-react": "^0.2.0",
+    "@opencoredev/loginwithchatgpt-server": "^0.2.0",
+    "@upstash/redis": "^1.38.0",
+    "ai": "^7.0.22",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

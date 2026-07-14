@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   analyseAttempt,
+  findAttemptReferenceForYear,
   matchesAttemptReference,
   type AppData,
   type AssessmentReference,
@@ -329,10 +330,12 @@ function SubjectBreakdown({ data, references }: { data: AppData; references: Ass
 function RecentExams({
   data,
   references,
+  comparisonYear,
   onLogExam,
 }: {
   data: AppData
   references: AssessmentReference[]
+  comparisonYear: number
   onLogExam: () => void
 }) {
   const recent = useMemo(
@@ -359,13 +362,7 @@ function RecentExams({
         {recent.length ? (
           <ul className="flex flex-col divide-y rounded-lg border" role="list">
             {recent.map((attempt) => {
-              const reference =
-                references.find(
-                  (item) =>
-                    item.year === attempt.examYear && matchesAttemptReference(attempt, item),
-                ) ?? (attempt.referenceId
-                  ? references.find((item) => item.id === attempt.referenceId)
-                  : undefined)
+              const reference = findAttemptReferenceForYear(attempt, references, comparisonYear)
               const analysis = analyseAttempt(attempt, reference)
               return (
                 <li key={attempt.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
@@ -389,9 +386,9 @@ function RecentExams({
                     <ArrowDownRight aria-hidden />
                   </Button>
                   <span className="whitespace-nowrap text-sm font-medium tabular-nums">
-                    {attempt.rawScore}/{attempt.rawMax}
+                    {reference ? `${analysis.scaledScore.toFixed(1)}/${reference.maxScore}` : `${attempt.rawScore}/${attempt.rawMax}`}
                     <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                      {analysis.percentage.toFixed(1)}%
+                      {reference ? "scaled" : `${analysis.percentage.toFixed(1)}%`}
                     </span>
                   </span>
                 </li>
@@ -423,6 +420,8 @@ function RecentExams({
 export type DashboardProps = {
   data: AppData
   references: AssessmentReference[]
+  comparisonYear: number
+  onComparisonYearChange: (year: number) => void
   timetable: Timetable | null
   onLogExam: () => void
   onLogMistakeForLatest: () => void
@@ -437,6 +436,8 @@ export function Dashboard(props: DashboardProps) {
   const {
     data,
     references,
+    comparisonYear,
+    onComparisonYearChange,
     timetable,
     onLogExam,
     onLogMistakeForLatest,
@@ -507,7 +508,7 @@ export function Dashboard(props: DashboardProps) {
         </Button>
       </PageHeader>
 
-      <RecentExams data={data} references={references} onLogExam={onLogExam} />
+      <RecentExams data={data} references={references} comparisonYear={comparisonYear} onLogExam={onLogExam} />
 
       {/* Deadlines and the next study action are both study signals -- stack them above stats. */}
       {deadlineSection}
@@ -541,7 +542,7 @@ export function Dashboard(props: DashboardProps) {
         </Suspense>
       </div>
 
-      <ExamTable attempts={data.attempts} references={references} onEdit={onEditExam} onAddMistake={onAddMistake} onDelete={onDeleteExam} />
+      <ExamTable attempts={data.attempts} references={references} comparisonYear={comparisonYear} onComparisonYearChange={onComparisonYearChange} onEdit={onEditExam} onAddMistake={onAddMistake} onDelete={onDeleteExam} />
     </div>
   )
 }

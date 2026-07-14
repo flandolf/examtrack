@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react"
-import { Check, Clock3, RotateCcw } from "lucide-react"
+import { Check, Clock3, Pause, Play, RotateCcw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,10 +21,11 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Progress, ProgressLabel } from "@/components/ui/progress"
 import { PageHeader } from "@/components/page-header"
 import { useTickingNow } from "@/hooks/use-ticking-now"
-import { formatExamTitle, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
+import { formatExamTitle, formatReferenceName, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
 import { formatTimer, getExamTimerState } from "@/lib/exam-timer"
 
 type TimerSession = {
@@ -37,6 +38,7 @@ type TimerSession = {
   writingMinutes: number
   marks: number
   startedAt: number
+  pausedAt?: number
 }
 
 type ExamTimerProps = {
@@ -53,7 +55,8 @@ function loadSession(): TimerSession | null {
     return value && typeof value.subject === "string" && typeof value.provider === "string" &&
       typeof value.title === "string" && typeof value.examYear === "number" && typeof value.paper === "string" &&
       typeof value.startedAt === "number" && typeof value.readingMinutes === "number" &&
-      typeof value.writingMinutes === "number" && typeof value.marks === "number"
+      typeof value.writingMinutes === "number" && typeof value.marks === "number" &&
+      (value.pausedAt === undefined || typeof value.pausedAt === "number")
       ? value as TimerSession
       : null
   } catch {
@@ -73,13 +76,20 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
   const [markingOpen, setMarkingOpen] = useState(false)
   const [rawScore, setRawScore] = useState(0)
   const [rawMax, setRawMax] = useState(40)
+  const [comment, setComment] = useState("")
   const [completedAt, setCompletedAt] = useState(today)
   const [markingError, setMarkingError] = useState<string | null>(null)
   const now = useTickingNow(250)
 
   const subjects = useMemo(() => [...new Set(references.map((item) => item.studyName))].toSorted(), [references])
+  const paperOptions = useMemo(
+    () => [...new Set(references
+      .filter((item) => item.studyName.toLowerCase() === subject.trim().toLowerCase())
+      .map((item) => formatReferenceName(item.name)))].toSorted(),
+    [references, subject],
+  )
   const timer = useMemo(() => session
-    ? getExamTimerState(now.getTime(), session.startedAt, session.readingMinutes, session.writingMinutes, session.marks)
+    ? getExamTimerState(session.pausedAt ?? now.getTime(), session.startedAt, session.readingMinutes, session.writingMinutes, session.marks)
     : null, [now, session])
 
   function start(event: FormEvent) {
@@ -107,11 +117,31 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
     setSession(next)
   }
 
+  function pause() {
+    if (!session || session.pausedAt) return
+    const next = { ...session, pausedAt: Date.now() }
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    setSession(next)
+  }
+
+  function resume() {
+    if (!session?.pausedAt) return
+    const next = { ...session, startedAt: session.startedAt + Date.now() - session.pausedAt, pausedAt: undefined }
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    setSession(next)
+  }
+
   function openMarking() {
     if (!session) return
+    pause()
     setRawMax(session.marks)
     setMarkingError(null)
     setMarkingOpen(true)
+  }
+
+  function closeMarking() {
+    setMarkingOpen(false)
+    resume()
   }
 
   function saveMark(event: FormEvent) {
@@ -133,6 +163,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
       completedAt,
       rawScore,
       rawMax,
+      comment: comment.trim() || undefined,
       referenceId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -178,7 +209,8 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="timer-paper">Paper</FieldLabel>
-                    <Input id="timer-paper" value={paper} onChange={(event) => setPaper(event.target.value)} placeholder="Exam 1" />
+                    <Input id="timer-paper" list="timer-paper-options" value={paper} onChange={(event) => setPaper(event.target.value)} placeholder="Exam 1" />
+                    <datalist id="timer-paper-options">{paperOptions.map((item) => <option key={item} value={item} />)}</datalist>
                   </Field>
                 </div>
 
@@ -219,6 +251,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
     <div className="mx-auto grid w-full max-w-5xl gap-8">
       <PageHeader title={session.title} description={`${session.subject} · ${session.readingMinutes} min reading · ${session.writingMinutes} min writing · ${session.marks} marks`}>
         <Button variant="ghost" onClick={reset}><RotateCcw />Discard</Button>
+        <Button variant="outline" onClick={session.pausedAt ? resume : pause}>{session.pausedAt ? <Play /> : <Pause />}{session.pausedAt ? "Resume" : "Pause"}</Button>
         <Button onClick={openMarking}><Check />Finish & mark</Button>
       </PageHeader>
 
@@ -243,7 +276,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
 
       {overtime ? <Alert variant="destructive"><Clock3 /><AlertTitle>Writing time has ended</AlertTitle><AlertDescription>The timer is now recording overtime. Finish and mark when you put your pen down.</AlertDescription></Alert> : null}
 
-      <Dialog open={markingOpen} onOpenChange={setMarkingOpen}>
+      <Dialog open={markingOpen} onOpenChange={(open) => open ? setMarkingOpen(true) : closeMarking()}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Mark and log exam</DialogTitle>
@@ -265,11 +298,15 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
                 <FieldLabel htmlFor="timer-completed">Completed</FieldLabel>
                 <Input id="timer-completed" type="date" value={completedAt} onChange={(event) => setCompletedAt(event.target.value)} required />
               </Field>
+              <Field>
+                <FieldLabel htmlFor="timer-comment">Overall comment <span className="text-muted-foreground">(optional)</span></FieldLabel>
+                <Textarea id="timer-comment" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="What went well or what to improve next time?" />
+              </Field>
               <FieldError>{markingError}</FieldError>
             </FieldGroup>
           </form>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMarkingOpen(false)}>Keep timing</Button>
+            <Button variant="outline" onClick={closeMarking}>Keep timing</Button>
             <Button type="submit" form="timer-marking-form">Log exam attempt</Button>
           </DialogFooter>
         </DialogContent>

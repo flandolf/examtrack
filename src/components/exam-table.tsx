@@ -18,19 +18,22 @@ const AttemptDistributionChart = lazy(() =>
 export function ExamTable({
   attempts,
   references,
+  comparisonYear,
+  onComparisonYearChange,
   onEdit,
   onAddMistake,
   onDelete,
 }: {
   attempts: ExamAttempt[]
   references: AssessmentReference[]
+  comparisonYear: number
+  onComparisonYearChange: (year: number) => void
   onEdit: (attempt: ExamAttempt) => void
   onAddMistake: (attemptId: string) => void
   onDelete: (attempt: ExamAttempt) => void
 }) {
   const [query, setQuery] = useState("")
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [comparisonYear, setComparisonYear] = useState(2025)
   const comparisonYears = useMemo(
     () => [...new Set(references.map((reference) => reference.year))].toSorted((a, b) => b - a),
     [references],
@@ -70,7 +73,7 @@ export function ExamTable({
                 <TableHead>
                   <div className="flex items-center gap-2 whitespace-nowrap">
                     <span>VCAA comparison</span>
-                    <Select value={String(comparisonYear)} onValueChange={(value) => setComparisonYear(Number(value))}>
+                    <Select value={String(comparisonYear)} onValueChange={(value) => onComparisonYearChange(Number(value))}>
                       <SelectTrigger size="sm" className="w-auto border-0 bg-transparent px-1.5 py-0 text-xs font-medium shadow-none hover:bg-muted dark:bg-transparent dark:hover:bg-muted" aria-label="VCAA comparison year">
                         <SelectValue>{comparisonYear}</SelectValue>
                       </SelectTrigger>
@@ -98,9 +101,9 @@ export function ExamTable({
                       </TableCell>
                       <TableCell><div className="font-medium">{attempt.title}</div><div className="text-xs text-muted-foreground">{attempt.provider} · {attempt.paper}</div></TableCell>
                       <TableCell className="whitespace-nowrap">{new Date(`${attempt.completedAt}T00:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</TableCell>
-                      <TableCell className="tabular-nums">{attempt.rawScore}/{attempt.rawMax}</TableCell>
+                      <TableCell className="tabular-nums">{reference ? <><div>{analysis.scaledScore.toFixed(1)}/{reference.maxScore}</div><div className="text-xs text-muted-foreground">{attempt.rawScore}/{attempt.rawMax} raw</div></> : `${attempt.rawScore}/${attempt.rawMax}`}</TableCell>
                       <TableCell className="tabular-nums">{analysis.percentage.toFixed(1)}%</TableCell>
-                      <TableCell>{reference && analysis.grade ? <div className="flex items-center gap-2 whitespace-nowrap"><Badge variant="secondary">{analysis.grade}</Badge><span className="text-xs text-muted-foreground">{analysis.scaledScore.toFixed(1)}/{reference.maxScore} · est. {analysis.percentile?.toFixed(0)}th</span></div> : <span className="text-xs text-muted-foreground">Unavailable in {comparisonYear}</span>}</TableCell>
+                      <TableCell>{reference && analysis.grade ? <div className="flex items-center gap-2 whitespace-nowrap"><Badge variant="secondary">{analysis.grade}</Badge><span className="text-xs text-muted-foreground">est. {analysis.percentile?.toFixed(0)}th</span></div> : <span className="text-xs text-muted-foreground">Unavailable in {comparisonYear}</span>}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}><MoreHorizontal /><span className="sr-only">Exam actions</span></DropdownMenuTrigger>

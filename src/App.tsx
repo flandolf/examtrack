@@ -167,6 +167,7 @@ function MistakeList({ mistakes, attempts, mastered, onEdit, onToggle, onDelete 
             <CardContent className="grid gap-4">
               <Suspense fallback={<Skeleton className="h-24 w-full" />}>
                 {mistake.questionText ? <div><p className="mb-2 text-sm font-medium">Question</p><MarkdownPreview>{mistake.questionText}</MarkdownPreview></div> : null}
+                {mistake.totalMarks !== undefined && mistake.marksLost !== undefined ? <p className="text-sm text-muted-foreground">{mistake.marksLost}/{mistake.totalMarks} marks lost</p> : null}
                 <details className="group rounded-lg border">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-medium select-none">Reveal diagnosis and corrected method</summary>
                   <div className="grid gap-4 border-t p-3">
@@ -237,6 +238,7 @@ export default function App() {
   const [view, setView] = useState<View>("dashboard")
   const [data, setData] = useState<AppData>(() => (typeof localStorage === "undefined" ? EMPTY_APP_DATA : loadAppData()))
   const [references, setReferences] = useState<AssessmentReference[]>([])
+  const [comparisonYear, setComparisonYear] = useState(2025)
   const [examOpen, setExamOpen] = useState(false)
   const [editingAttempt, setEditingAttempt] = useState<ExamAttempt | null>(null)
   const [mistakeOpen, setMistakeOpen] = useState(false)
@@ -433,6 +435,8 @@ export default function App() {
               <Dashboard
                 data={data}
                 references={references}
+                comparisonYear={comparisonYear}
+                onComparisonYearChange={setComparisonYear}
                 timetable={timetable}
                 onLogExam={() => {
                   setEditingAttempt(null)
@@ -455,7 +459,7 @@ export default function App() {
       </SidebarInset>
       {examOpen ? (
         <Suspense fallback={null}>
-          <ExamSheet open references={references} initialAttempt={editingAttempt} onOpenChange={setExamOpen} onSave={saveAttempt} />
+          <ExamSheet open references={references} comparisonYear={comparisonYear} initialAttempt={editingAttempt} onOpenChange={setExamOpen} onSave={saveAttempt} />
         </Suspense>
       ) : null}
       {mistakeOpen ? (

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { analyseAttempt, analyseScore, buildAttemptBenchmarks, buildSubjectBenchmarks, buildVcaaYearInsights, computeDistributionStats, findAttemptReferenceForYear, formatExamTitle, getAttemptPoints, isAppData, matchesAttemptReference, migrateAppData, removeAttempt, validateAttempt, type AssessmentReference, type ExamAttempt } from "../src/lib/exam-data"
+import { analyseAttempt, analyseScore, buildAttemptBenchmarks, buildSubjectBenchmarks, buildVcaaYearInsights, computeDistributionStats, findAttemptReferenceForYear, formatExamTitle, getAttemptPoints, isAppData, matchesAttemptReference, migrateAppData, removeAttempt, validateAttempt, validateMistakeMarks, type AssessmentReference, type ExamAttempt } from "../src/lib/exam-data"
 import { parseAppDataFile } from "../src/lib/storage"
 import { buildTimetableCalendar, suggestTimetableForAttempt, type Timetable, type TimetableEntry } from "../src/lib/timetable"
 
@@ -46,6 +46,12 @@ describe("exam analysis", () => {
     expect(findAttemptReferenceForYear(attempt, [reference], 2024)).toBeUndefined()
   })
 
+  test("automatically matches every single-paper subject and keeps multi-paper matches exact", () => {
+    const english = { ...reference, id: "ENGLISH:2025:GA-3", studyName: "English", name: "WRITTEN EXAMINATION" }
+    expect(findAttemptReferenceForYear({ ...attempt, subject: "English", paper: "Practice paper" }, [english], 2025)).toBe(english)
+    expect(findAttemptReferenceForYear({ ...attempt, paper: "Exam 2" }, [reference, { ...reference, id: "METHODS:2025:GA-3", name: "WRITTEN EXAMINATION 2" }], 2025)?.name).toBe("WRITTEN EXAMINATION 2")
+  })
+
   test("scales raw marks and estimates a percentile inside the official band", () => {
     const result = analyseAttempt(attempt, reference)
     expect(result.scaledScore).toBe(64)
@@ -58,6 +64,12 @@ describe("exam analysis", () => {
   test("validates score boundaries", () => {
     expect(validateAttempt({ rawScore: 41, rawMax: 40 })).toBe("Mark cannot exceed the maximum.")
     expect(validateAttempt({ rawScore: 40, rawMax: 40 })).toBeNull()
+  })
+
+  test("validates mistake marks", () => {
+    expect(validateMistakeMarks(4, 1)).toBeNull()
+    expect(validateMistakeMarks(0, 0)).toBe("Total marks must be greater than zero.")
+    expect(validateMistakeMarks(4, 5)).toBe("Marks lost cannot exceed total marks.")
   })
 
   test("builds chart points and cascades attempt deletion", () => {

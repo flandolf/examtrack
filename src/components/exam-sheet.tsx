@@ -8,8 +8,9 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Sheet,
   SheetContent,
@@ -18,11 +19,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { formatExamTitle, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
+import { analyseAttempt, findAttemptReferenceForYear, formatExamTitle, formatReferenceName, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
 
 type ExamSheetProps = {
   open: boolean
   references: AssessmentReference[]
+  comparisonYear: number
   initialAttempt?: ExamAttempt | null
   onOpenChange: (open: boolean) => void
   onSave: (attempt: ExamAttempt) => void
@@ -30,7 +32,7 @@ type ExamSheetProps = {
 
 const today = new Date().toISOString().slice(0, 10)
 
-export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSave }: ExamSheetProps) {
+export function ExamSheet({ open, references, comparisonYear, initialAttempt, onOpenChange, onSave }: ExamSheetProps) {
   const [subject, setSubject] = useState(initialAttempt?.subject ?? "")
   const [provider, setProvider] = useState(initialAttempt?.provider ?? "VCAA")
   const [examYear, setExamYear] = useState(initialAttempt?.examYear ?? new Date().getFullYear())
@@ -38,12 +40,21 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
   const [completedAt, setCompletedAt] = useState(initialAttempt?.completedAt ?? today)
   const [rawScore, setRawScore] = useState(initialAttempt?.rawScore ?? 0)
   const [rawMax, setRawMax] = useState(initialAttempt?.rawMax ?? 40)
+  const [comment, setComment] = useState(initialAttempt?.comment ?? "")
   const [error, setError] = useState<string | null>(null)
 
   const subjects = useMemo(
     () => [...new Set(references.map((item) => item.studyName))].toSorted(),
     [references],
   )
+  const paperOptions = useMemo(
+    () => [...new Set(references
+      .filter((item) => item.studyName.toLowerCase() === subject.trim().toLowerCase())
+      .map((item) => formatReferenceName(item.name)))].toSorted(),
+    [references, subject],
+  )
+  const reference = findAttemptReferenceForYear({ subject, paper }, references, comparisonYear)
+  const scaled = reference && rawMax > 0 ? analyseAttempt({ rawScore, rawMax }, reference) : null
   function reset() {
     setSubject("")
     setProvider("VCAA")
@@ -52,6 +63,7 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
     setCompletedAt(today)
     setRawScore(0)
     setRawMax(40)
+    setComment("")
     setError(null)
   }
 
@@ -78,6 +90,7 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
       completedAt,
       rawScore,
       rawMax,
+      comment: comment.trim() || undefined,
       referenceId: null,
       createdAt: initialAttempt?.createdAt ?? timestamp,
       updatedAt: timestamp,
@@ -130,7 +143,8 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
               </Field>
               <Field>
                 <FieldLabel htmlFor="paper">Paper</FieldLabel>
-                <Input id="paper" value={paper} onChange={(event) => setPaper(event.target.value)} placeholder="Exam 1" />
+                <Input id="paper" list="exam-paper-options" value={paper} onChange={(event) => setPaper(event.target.value)} placeholder="Exam 1" />
+                <datalist id="exam-paper-options">{paperOptions.map((item) => <option key={item} value={item} />)}</datalist>
               </Field>
             </div>
 
@@ -149,6 +163,15 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
                 <Input id="raw-max" type="number" min="0.5" step="0.5" value={rawMax} onChange={(event) => setRawMax(event.target.valueAsNumber)} />
               </Field>
             </div>
+            {scaled && reference ? (
+              <FieldDescription>
+                VCAA {comparisonYear} scaled mark: {scaled.scaledScore.toFixed(1)}/{reference.maxScore} ({formatReferenceName(reference.name)}).
+              </FieldDescription>
+            ) : null}
+            <Field>
+              <FieldLabel htmlFor="exam-comment">Overall comment <span className="text-muted-foreground">(optional)</span></FieldLabel>
+              <Textarea id="exam-comment" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="What went well or what to improve next time?" />
+            </Field>
             <FieldError>{error}</FieldError>
           </FieldGroup>
         </form>

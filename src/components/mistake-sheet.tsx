@@ -34,6 +34,7 @@ import {
   type ExamAttempt,
   type Mistake,
   type MistakeCategory,
+  validateMistakeMarks,
 } from "@/lib/exam-data"
 import { analyseMistakeImage, validateMistakeImage } from "@/lib/mistake-ai"
 
@@ -61,6 +62,8 @@ export function MistakeSheet({
   const [category, setCategory] = useState<MistakeCategory>(initialMistake?.category ?? "Concept")
   const [explanation, setExplanation] = useState(initialMistake?.explanation ?? "")
   const [correction, setCorrection] = useState(initialMistake?.correction ?? "")
+  const [totalMarks, setTotalMarks] = useState(initialMistake?.totalMarks ?? 0)
+  const [marksLost, setMarksLost] = useState(initialMistake?.marksLost ?? 0)
   const [image, setImage] = useState<File | null>(null)
   const [analysing, setAnalysing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,6 +82,8 @@ export function MistakeSheet({
     setCategory("Concept")
     setExplanation("")
     setCorrection("")
+    setTotalMarks(0)
+    setMarksLost(0)
     setImage(null)
     setError(null)
   }
@@ -107,10 +112,12 @@ export function MistakeSheet({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const marksError = validateMistakeMarks(totalMarks, marksLost)
     if (!selectedAttempt || !question.trim() || !questionText.trim() || !explanation.trim() || !correction.trim()) {
       setError("Exam, question number, question, mistake, and corrected method are required.")
       return
     }
+    if (marksError) return setError(marksError)
     const timestamp = new Date().toISOString()
     onSave({
       id: initialMistake?.id ?? crypto.randomUUID(),
@@ -120,6 +127,8 @@ export function MistakeSheet({
       category,
       explanation: explanation.trim(),
       correction: correction.trim(),
+      totalMarks,
+      marksLost,
       resolved: initialMistake?.resolved ?? false,
       createdAt: initialMistake?.createdAt ?? timestamp,
       updatedAt: timestamp,
@@ -208,6 +217,17 @@ export function MistakeSheet({
               <Field>
                 <FieldLabel htmlFor="question">Question number</FieldLabel>
                 <Input id="question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Question 4b" />
+              </Field>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="mistake-total-marks">Total marks</FieldLabel>
+                <Input id="mistake-total-marks" type="number" min="0.5" step="0.5" value={totalMarks || ""} onChange={(event) => setTotalMarks(event.target.valueAsNumber)} required />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="mistake-marks-lost">Marks lost</FieldLabel>
+                <Input id="mistake-marks-lost" type="number" min="0" step="0.5" value={marksLost} onChange={(event) => setMarksLost(event.target.valueAsNumber)} required />
               </Field>
             </div>
 

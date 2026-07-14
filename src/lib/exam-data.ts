@@ -42,6 +42,7 @@ export type ExamAttempt = {
   completedAt: string
   rawScore: number
   rawMax: number
+  comment?: string
   referenceId: string | null
   createdAt: string
   updatedAt: string
@@ -55,6 +56,8 @@ export type Mistake = {
   category: MistakeCategory
   explanation: string
   correction: string
+  totalMarks?: number
+  marksLost?: number
   resolved: boolean
   createdAt: string
   updatedAt: string
@@ -123,7 +126,7 @@ export function analyseScore(
 }
 
 export function analyseAttempt(
-  attempt: ExamAttempt,
+  attempt: Pick<ExamAttempt, "rawScore" | "rawMax">,
   reference?: AssessmentReference,
 ): AttemptAnalysis {
   const percentage = (attempt.rawScore / attempt.rawMax) * 100
@@ -152,6 +155,12 @@ export function validateAttempt(
   return null
 }
 
+export function validateMistakeMarks(totalMarks: number, marksLost: number): string | null {
+  if (!Number.isFinite(totalMarks) || totalMarks <= 0) return "Total marks must be greater than zero."
+  if (!Number.isFinite(marksLost) || marksLost < 0) return "Marks lost must be zero or greater."
+  return marksLost > totalMarks ? "Marks lost cannot exceed total marks." : null
+}
+
 export function normaliseComparisonName(value: string) {
   return value
     .toLowerCase()
@@ -161,7 +170,7 @@ export function normaliseComparisonName(value: string) {
     .trim()
 }
 
-export function matchesAttemptReference(attempt: ExamAttempt, reference: AssessmentReference) {
+export function matchesAttemptReference(attempt: Pick<ExamAttempt, "subject" | "paper">, reference: AssessmentReference) {
   return normaliseComparisonName(attempt.subject) === normaliseComparisonName(reference.studyName) &&
     normaliseComparisonName(attempt.paper) === normaliseComparisonName(reference.name)
 }
@@ -272,28 +281,29 @@ export function getReferencesForAttempt(
   attempt: ExamAttempt,
   references: AssessmentReference[],
 ): AssessmentReference[] {
-  return references
-    .filter((reference) => matchesAttemptReference(attempt, reference))
+  return [...new Set(references.map((reference) => reference.year))]
+    .flatMap((year) => findAttemptReferenceForYear(attempt, references, year) ?? [])
     .toSorted((a, b) => b.year - a.year)
 }
 
 export function findAttemptReferenceForYear(
-  attempt: ExamAttempt,
+  attempt: Pick<ExamAttempt, "subject" | "paper">,
   references: AssessmentReference[],
   year: number,
 ): AssessmentReference | undefined {
-  return references.find(
-    (reference) => reference.year === year && matchesAttemptReference(attempt, reference),
+  const subject = normaliseComparisonName(attempt.subject)
+  const candidates = references.filter(
+    (reference) => reference.year === year && normaliseComparisonName(reference.studyName) === subject,
   )
+  return candidates.find((reference) => matchesAttemptReference(attempt, reference)) ??
+    (candidates.length === 1 ? candidates[0] : undefined)
 }
 
 export function findAttemptReference(
   attempt: ExamAttempt,
   references: AssessmentReference[],
 ): AssessmentReference | undefined {
-  return references.find(
-    (reference) => reference.year === attempt.examYear && matchesAttemptReference(attempt, reference),
-  ) ?? (attempt.referenceId
+  return findAttemptReferenceForYear(attempt, references, attempt.examYear) ?? (attempt.referenceId
     ? references.find((reference) => reference.id === attempt.referenceId)
     : undefined)
 }
@@ -395,7 +405,11 @@ export function buildSubjectBenchmarks(
 }
 
 export function formatReferenceName(name: string): string {
-  return name.replace(/written examination/i, "Exam").trim()
+  return name.toLowerCase()
+    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+    .replace(/\b(And|Or)\b/g, (word) => word.toLowerCase())
+    .replace(/^Written Examination/, "Exam")
+    .trim()
 }
 
 export function removeAttempt(data: AppData, attemptId: string): AppData {
@@ -429,6 +443,7 @@ export function isAppData(value: unknown): value is AppData {
           typeof attempt.completedAt === "string" &&
           typeof attempt.rawScore === "number" &&
           typeof attempt.rawMax === "number" &&
+          (attempt.comment === undefined || typeof attempt.comment === "string") &&
           (attempt.referenceId === null || typeof attempt.referenceId === "string") &&
           typeof attempt.createdAt === "string" &&
           typeof attempt.updatedAt === "string" &&
@@ -451,6 +466,9 @@ export function isAppData(value: unknown): value is AppData {
         MISTAKE_CATEGORIES.includes(mistake.category) &&
         typeof mistake.explanation === "string" &&
         typeof mistake.correction === "string" &&
+        (mistake.totalMarks === undefined || typeof mistake.totalMarks === "number") &&
+        (mistake.marksLost === undefined || typeof mistake.marksLost === "number") &&
+        (mistake.totalMarks === undefined && mistake.marksLost === undefined || validateMistakeMarks(mistake.totalMarks!, mistake.marksLost!) === null) &&
         typeof mistake.resolved === "boolean" &&
         typeof mistake.createdAt === "string" &&
         typeof mistake.updatedAt === "string"

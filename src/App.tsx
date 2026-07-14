@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react"
 import {
   ChartNoAxesCombined,
   Clock3,
+  Calculator,
   Download,
   GraduationCap,
   LibraryBig,
@@ -81,13 +82,17 @@ const ExamTimer = lazy(() =>
 const SettingsPage = lazy(() =>
   import("@/components/settings-page").then((module) => ({ default: module.SettingsPage })),
 )
+const StudyScorePredictor = lazy(() =>
+  import("@/components/study-score-predictor").then((module) => ({ default: module.StudyScorePredictor })),
+)
 
-type View = "dashboard" | "timer" | "mistakes" | "vcaa" | "settings"
+type View = "dashboard" | "timer" | "mistakes" | "predictor" | "vcaa" | "settings"
 
 const NAVIGATION = [
   { id: "dashboard" as const, label: "Dashboard", icon: ChartNoAxesCombined },
   { id: "timer" as const, label: "Exam timer", icon: Clock3 },
   { id: "mistakes" as const, label: "Mistakes", icon: NotebookPen },
+  { id: "predictor" as const, label: "Study score", icon: Calculator },
   { id: "vcaa" as const, label: "VCAA data", icon: LibraryBig },
 ]
 const SETTINGS_ITEM = { id: "settings" as const, label: "Settings", icon: Settings2 }
@@ -453,6 +458,7 @@ export default function App() {
           ) : null}
           {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onToggle={toggleMistake} onDelete={deleteMistake} /> : null}
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer references={references} onSave={saveTimedAttempt} /></Suspense> : null}
+          {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} /></Suspense> : null}
           {view === "vcaa" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><VcaaExplorer references={references} attempts={data.attempts} /></Suspense> : null}
           {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage sync={sync} /></Suspense> : null}
         </main>

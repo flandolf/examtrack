@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Progress } from "@/components/ui/progress"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Sidebar,
   SidebarContent,
@@ -54,6 +55,7 @@ import {
   type Mistake,
 } from "@/lib/exam-data"
 import { downloadAppData, loadAppData, parseAppDataFile, saveAppData } from "@/lib/storage"
+import { buildRevisionPriorities, buildRevisionQueue } from "@/lib/mistake-review"
 import { useSupabaseSync } from "@/lib/sync"
 import { loadTimetable, suggestTimetableForAttempt, formatExamLabel, type Timetable } from "@/lib/timetable"
 import { ExamTrackerPicker } from "@/components/exam-tracker-picker"
@@ -147,9 +149,9 @@ function AppSidebar({ view, data, syncLabel, onViewChange }: { view: View; data:
   )
 }
 
-function MistakeList({ mistakes, attempts, onEdit, onToggle, onDelete }: { mistakes: Mistake[]; attempts: ExamAttempt[]; onEdit: (mistake: Mistake) => void; onToggle: (mistake: Mistake) => void; onDelete: (mistake: Mistake) => void }) {
+function MistakeList({ mistakes, attempts, mastered, onEdit, onToggle, onDelete }: { mistakes: Mistake[]; attempts: ExamAttempt[]; mastered?: boolean; onEdit: (mistake: Mistake) => void; onToggle: (mistake: Mistake) => void; onDelete: (mistake: Mistake) => void }) {
   const attemptMap = useMemo(() => new Map(attempts.map((attempt) => [attempt.id, attempt])), [attempts])
-  if (!mistakes.length) return <Empty className="min-h-64 border"><EmptyHeader><EmptyMedia variant="icon"><NotebookPen /></EmptyMedia><EmptyTitle>Nothing here</EmptyTitle><EmptyDescription>Mistakes logged against an exam will appear in this list.</EmptyDescription></EmptyHeader></Empty>
+  if (!mistakes.length) return <Empty className="min-h-64 border"><EmptyHeader><EmptyMedia variant="icon"><NotebookPen /></EmptyMedia><EmptyTitle>{mastered ? "No mastered mistakes yet" : "Revision queue clear"}</EmptyTitle><EmptyDescription>{mastered ? "Mistakes you can now answer correctly will appear here." : "Log a mistake after your next practice exam or revise a mastered one again."}</EmptyDescription></EmptyHeader></Empty>
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {mistakes.map((mistake) => {
@@ -165,11 +167,16 @@ function MistakeList({ mistakes, attempts, onEdit, onToggle, onDelete }: { mista
             <CardContent className="grid gap-4">
               <Suspense fallback={<Skeleton className="h-24 w-full" />}>
                 {mistake.questionText ? <div><p className="mb-2 text-sm font-medium">Question</p><MarkdownPreview>{mistake.questionText}</MarkdownPreview></div> : null}
-                <div><p className="mb-2 text-sm font-medium">What went wrong</p><MarkdownPreview>{mistake.explanation}</MarkdownPreview></div>
-                <div><p className="mb-2 text-sm font-medium">Corrected method</p><MarkdownPreview>{mistake.correction}</MarkdownPreview></div>
+                <details className="group rounded-lg border">
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium select-none">Reveal diagnosis and corrected method</summary>
+                  <div className="grid gap-4 border-t p-3">
+                    <div><p className="mb-2 text-sm font-medium">What went wrong</p><MarkdownPreview>{mistake.explanation}</MarkdownPreview></div>
+                    <div><p className="mb-2 text-sm font-medium">Corrected method</p><MarkdownPreview>{mistake.correction}</MarkdownPreview></div>
+                  </div>
+                </details>
               </Suspense>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant={mistake.resolved ? "outline" : "default"} onClick={() => onToggle(mistake)}>{mistake.resolved ? "Mark unresolved" : "Mark resolved"}</Button>
+                <Button size="sm" variant={mistake.resolved ? "outline" : "default"} onClick={() => onToggle(mistake)}>{mistake.resolved ? "Revise again" : "I can do this now"}</Button>
                 <Button size="sm" variant="outline" onClick={() => onEdit(mistake)}>Edit</Button>
                 <Button size="sm" variant="ghost" onClick={() => onDelete(mistake)}>Delete</Button>
               </div>
@@ -182,19 +189,45 @@ function MistakeList({ mistakes, attempts, onEdit, onToggle, onDelete }: { mista
 }
 
 function MistakesPage({ data, onLog, onEdit, onToggle, onDelete }: { data: AppData; onLog: () => void; onEdit: (mistake: Mistake) => void; onToggle: (mistake: Mistake) => void; onDelete: (mistake: Mistake) => void }) {
-  const unresolved = data.mistakes.filter((mistake) => !mistake.resolved)
-  const resolved = data.mistakes.filter((mistake) => mistake.resolved)
-  const completion = data.mistakes.length ? (resolved.length / data.mistakes.length) * 100 : 0
+  const [subject, setSubject] = useState("all")
+  const attemptSubjects = useMemo(() => new Map(data.attempts.map((attempt) => [attempt.id, attempt.subject])), [data.attempts])
+  const subjects = useMemo(() => [...new Set(data.attempts.map((attempt) => attempt.subject))].toSorted(), [data.attempts])
+  const activeSubject = subject === "all" || subjects.includes(subject) ? subject : "all"
+  const visibleMistakes = data.mistakes.filter((mistake) => activeSubject === "all" || attemptSubjects.get(mistake.attemptId) === activeSubject)
+  const unresolved = buildRevisionQueue(visibleMistakes)
+  const resolved = visibleMistakes.filter((mistake) => mistake.resolved).toSorted((first, second) => second.updatedAt.localeCompare(first.updatedAt))
+  const topPriority = buildRevisionPriorities(visibleMistakes).find((item) => item.unresolved > 0)
+  const completion = visibleMistakes.length ? (resolved.length / visibleMistakes.length) * 100 : 0
   return (
     <div className="grid gap-6">
-      <PageHeader title="Mistakes" description="Keep corrections close to the exam where the error happened.">
+      <PageHeader title="Mistakes" description="Redo each question before revealing the correction, then mark it mastered only when you can solve it unaided.">
         <Button onClick={onLog} disabled={!data.attempts.length}><Plus />Log mistake</Button>
       </PageHeader>
-      {data.mistakes.length ? <div className="flex items-center gap-3"><Progress value={completion} className="w-48" /><span className="text-sm text-muted-foreground">{resolved.length} of {data.mistakes.length} resolved</span></div> : null}
+      {data.mistakes.length ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <Progress value={completion} className="w-48" />
+          <span className="text-sm text-muted-foreground">{resolved.length} of {visibleMistakes.length} mastered</span>
+          {subjects.length > 1 ? (
+            <Select value={activeSubject} onValueChange={(value) => setSubject(value ?? "all")}>
+              <SelectTrigger aria-label="Filter mistakes by subject"><SelectValue>{activeSubject === "all" ? "All subjects" : activeSubject}</SelectValue></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All subjects</SelectItem>
+                {subjects.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : null}
+        </div>
+      ) : null}
+      {topPriority ? (
+        <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm">
+          <span className="font-medium">Start with {topPriority.category}.</span>{" "}
+          <span className="text-muted-foreground">It is your most frequent unresolved error type; older mistakes in that category are first.</span>
+        </div>
+      ) : null}
       <Tabs defaultValue="unresolved">
-        <TabsList><TabsTrigger value="unresolved">Unresolved ({unresolved.length})</TabsTrigger><TabsTrigger value="resolved">Resolved ({resolved.length})</TabsTrigger></TabsList>
+        <TabsList><TabsTrigger value="unresolved">To review ({unresolved.length})</TabsTrigger><TabsTrigger value="resolved">Mastered ({resolved.length})</TabsTrigger></TabsList>
         <TabsContent value="unresolved" className="mt-4"><MistakeList mistakes={unresolved} attempts={data.attempts} onEdit={onEdit} onToggle={onToggle} onDelete={onDelete} /></TabsContent>
-        <TabsContent value="resolved" className="mt-4"><MistakeList mistakes={resolved} attempts={data.attempts} onEdit={onEdit} onToggle={onToggle} onDelete={onDelete} /></TabsContent>
+        <TabsContent value="resolved" className="mt-4"><MistakeList mistakes={resolved} attempts={data.attempts} mastered onEdit={onEdit} onToggle={onToggle} onDelete={onDelete} /></TabsContent>
       </Tabs>
     </div>
   )

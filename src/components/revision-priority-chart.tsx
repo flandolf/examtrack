@@ -2,25 +2,11 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { Mistake } from "@/lib/exam-data"
+import { buildRevisionPriorities } from "@/lib/mistake-review"
 
 const chartConfig = {
   unresolved: { label: "Unresolved", color: "#dc2626" },
   resolved: { label: "Resolved", color: "#16a34a" },
-}
-
-// Exported for the small ranking self-check; the UI consumes the same function.
-// oxlint-disable-next-line react/only-export-components
-export function buildRevisionPriorities(mistakes: Mistake[]) {
-  const counts = new Map<string, { category: string; unresolved: number; resolved: number }>()
-  for (const mistake of mistakes) {
-    const entry = counts.get(mistake.category) ?? { category: mistake.category, unresolved: 0, resolved: 0 }
-    entry[mistake.resolved ? "resolved" : "unresolved"] += 1
-    counts.set(mistake.category, entry)
-  }
-  return [...counts.values()].toSorted(
-    (first, second) => second.unresolved - first.unresolved ||
-      second.unresolved + second.resolved - (first.unresolved + first.resolved),
-  )
 }
 
 export function RevisionPriorityChart({ mistakes }: { mistakes: Mistake[] }) {

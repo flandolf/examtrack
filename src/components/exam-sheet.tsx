@@ -8,9 +8,8 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -19,7 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { formatExamTitle, formatReferenceName, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
+import { formatExamTitle, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
 
 type ExamSheetProps = {
   open: boolean
@@ -32,10 +31,6 @@ type ExamSheetProps = {
 const today = new Date().toISOString().slice(0, 10)
 
 export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSave }: ExamSheetProps) {
-  const [referenceId, setReferenceId] = useState<string | null>(initialAttempt?.referenceId ?? null)
-  const [comparisonYear, setComparisonYear] = useState<number | null>(
-    references.find((item) => item.id === initialAttempt?.referenceId)?.year ?? null,
-  )
   const [subject, setSubject] = useState(initialAttempt?.subject ?? "")
   const [provider, setProvider] = useState(initialAttempt?.provider ?? "VCAA")
   const [examYear, setExamYear] = useState(initialAttempt?.examYear ?? new Date().getFullYear())
@@ -49,48 +44,7 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
     () => [...new Set(references.map((item) => item.studyName))].toSorted(),
     [references],
   )
-  const subjectReferences = useMemo(
-    () => references.filter((item) => item.studyName.toLowerCase() === subject.trim().toLowerCase()),
-    [references, subject],
-  )
-  const comparisonYears = useMemo(
-    () => [...new Set(subjectReferences.map((item) => item.year))].toSorted((a, b) => b - a),
-    [subjectReferences],
-  )
-  const yearReferences = useMemo(
-    () => subjectReferences.filter((item) => item.year === comparisonYear),
-    [comparisonYear, subjectReferences],
-  )
-
-  const reference = useMemo(
-    () => references.find((item) => item.id === referenceId),
-    [referenceId, references],
-  )
-
-  function selectReference(item: AssessmentReference) {
-    setReferenceId(item.id)
-    setComparisonYear(item.year)
-    setExamYear(item.year)
-    setPaper(formatReferenceName(item.name))
-    setProvider("VCAA")
-  }
-
-  function selectComparisonYear(value: string | null) {
-    if (!value || value === "none") {
-      setComparisonYear(null)
-      setReferenceId(null)
-      return
-    }
-    const year = Number(value)
-    const matches = subjectReferences.filter((item) => item.year === year)
-    setComparisonYear(year)
-    setReferenceId(null)
-    if (matches.length === 1) selectReference(matches[0])
-  }
-
   function reset() {
-    setReferenceId(null)
-    setComparisonYear(null)
     setSubject("")
     setProvider("VCAA")
     setExamYear(new Date().getFullYear())
@@ -99,12 +53,6 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
     setRawScore(0)
     setRawMax(40)
     setError(null)
-  }
-
-  function changeSubject(value: string) {
-    setSubject(value)
-    setReferenceId(null)
-    setComparisonYear(null)
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -130,7 +78,7 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
       completedAt,
       rawScore,
       rawMax,
-      referenceId,
+      referenceId: null,
       createdAt: initialAttempt?.createdAt ?? timestamp,
       updatedAt: timestamp,
     })
@@ -144,7 +92,7 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
         <SheetHeader>
           <SheetTitle>{initialAttempt ? "Edit practice exam" : "Log practice exam"}</SheetTitle>
           <SheetDescription>
-            Link an official distribution when available, or enter any exam manually.
+            Record a completed practice exam and its raw mark.
           </SheetDescription>
         </SheetHeader>
         <form id="exam-form" className="px-4 pb-4" onSubmit={submit}>
@@ -156,8 +104,8 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
                   items={subjects}
                   inputValue={subject}
                   value={subjects.includes(subject) ? subject : null}
-                  onInputValueChange={changeSubject}
-                  onValueChange={(value) => changeSubject(value ?? "")}
+                  onInputValueChange={setSubject}
+                  onValueChange={(value) => setSubject(value ?? "")}
                   autoHighlight
                 >
                   <ComboboxInput id="subject" placeholder="Search VCAA subjects" showClear />
@@ -174,33 +122,6 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
                 <Input id="provider" value={provider} onChange={(event) => setProvider(event.target.value)} />
               </Field>
             </div>
-
-            <Field>
-              <FieldLabel>Official VCAA comparison</FieldLabel>
-              <div className={yearReferences.length > 1 ? "grid gap-2 sm:grid-cols-2" : undefined}>
-                <Select value={comparisonYear ? String(comparisonYear) : "none"} onValueChange={selectComparisonYear} disabled={!subjectReferences.length}>
-                  <SelectTrigger className="w-full"><SelectValue>{subjectReferences.length ? (comparisonYear ? String(comparisonYear) : "No comparison") : "Select a VCAA subject first"}</SelectValue></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No comparison</SelectItem>
-                    {comparisonYears.map((year) => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {yearReferences.length > 1 ? (
-                  <Select value={reference?.year === comparisonYear ? reference.id : ""} onValueChange={(value) => {
-                    const item = references.find((candidate) => candidate.id === value)
-                    if (item) selectReference(item)
-                  }}>
-                    <SelectTrigger className="w-full"><SelectValue>{reference ? formatReferenceName(reference.name) : "Choose an examination"}</SelectValue></SelectTrigger>
-                    <SelectContent>
-                      {yearReferences.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>{formatReferenceName(item.name)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : null}
-              </div>
-              <FieldDescription>Choose a year, then the examination only when the subject has more than one.</FieldDescription>
-            </Field>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <Field>
@@ -228,11 +149,6 @@ export function ExamSheet({ open, references, initialAttempt, onOpenChange, onSa
                 <Input id="raw-max" type="number" min="0.5" step="0.5" value={rawMax} onChange={(event) => setRawMax(event.target.valueAsNumber)} />
               </Field>
             </div>
-            {reference ? (
-              <FieldDescription>
-                This result will be scaled to {reference.maxScore}: {rawScore}/{rawMax} → {((rawScore / rawMax) * reference.maxScore || 0).toFixed(1)}/{reference.maxScore}.
-              </FieldDescription>
-            ) : null}
             <FieldError>{error}</FieldError>
           </FieldGroup>
         </form>

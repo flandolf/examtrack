@@ -19,13 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Progress, ProgressLabel } from "@/components/ui/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PageHeader } from "@/components/page-header"
 import { useTickingNow } from "@/hooks/use-ticking-now"
-import { formatExamTitle, formatReferenceName, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
+import { formatExamTitle, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
 import { formatTimer, getExamTimerState } from "@/lib/exam-timer"
 
 type TimerSession = {
@@ -34,7 +33,6 @@ type TimerSession = {
   title: string
   examYear: number
   paper: string
-  referenceId: string | null
   readingMinutes: number
   writingMinutes: number
   marks: number
@@ -56,7 +54,7 @@ function loadSession(): TimerSession | null {
       typeof value.title === "string" && typeof value.examYear === "number" && typeof value.paper === "string" &&
       typeof value.startedAt === "number" && typeof value.readingMinutes === "number" &&
       typeof value.writingMinutes === "number" && typeof value.marks === "number"
-      ? { ...value, referenceId: typeof value.referenceId === "string" ? value.referenceId : null } as TimerSession
+      ? value as TimerSession
       : null
   } catch {
     return null
@@ -69,8 +67,6 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
   const [provider, setProvider] = useState("VCAA")
   const [examYear, setExamYear] = useState(new Date().getFullYear())
   const [paper, setPaper] = useState("")
-  const [referenceId, setReferenceId] = useState<string | null>(null)
-  const [comparisonYear, setComparisonYear] = useState<number | null>(null)
   const [readingMinutes, setReadingMinutes] = useState(15)
   const [writingMinutes, setWritingMinutes] = useState(60)
   const [marks, setMarks] = useState(40)
@@ -82,53 +78,14 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
   const now = useTickingNow(250)
 
   const subjects = useMemo(() => [...new Set(references.map((item) => item.studyName))].toSorted(), [references])
-  const subjectReferences = useMemo(
-    () => references.filter((item) => item.studyName.toLowerCase() === subject.trim().toLowerCase()),
-    [references, subject],
-  )
-  const comparisonYears = useMemo(
-    () => [...new Set(subjectReferences.map((item) => item.year))].toSorted((a, b) => b - a),
-    [subjectReferences],
-  )
-  const yearReferences = useMemo(
-    () => subjectReferences.filter((item) => item.year === comparisonYear),
-    [comparisonYear, subjectReferences],
-  )
   const timer = useMemo(() => session
     ? getExamTimerState(now.getTime(), session.startedAt, session.readingMinutes, session.writingMinutes, session.marks)
     : null, [now, session])
 
-  function selectReference(item: AssessmentReference) {
-    setReferenceId(item.id)
-    setComparisonYear(item.year)
-    setProvider("VCAA")
-    setExamYear(item.year)
-    setPaper(formatReferenceName(item.name))
-  }
-
-  function selectComparisonYear(value: string | null) {
-    if (!value || value === "none") {
-      setComparisonYear(null)
-      setReferenceId(null)
-      return
-    }
-    const year = Number(value)
-    const matches = subjectReferences.filter((item) => item.year === year)
-    setComparisonYear(year)
-    setReferenceId(null)
-    if (matches.length === 1) selectReference(matches[0])
-  }
-
-  function changeSubject(value: string) {
-    setSubject(value)
-    setComparisonYear(null)
-    setReferenceId(null)
-  }
-
   function start(event: FormEvent) {
     event.preventDefault()
     const next = {
-      subject: subject.trim(), provider: provider.trim(), title: formatExamTitle(provider, examYear, subject), examYear, paper: paper.trim(), referenceId,
+      subject: subject.trim(), provider: provider.trim(), title: formatExamTitle(provider, examYear, subject), examYear, paper: paper.trim(),
       readingMinutes, writingMinutes, marks, startedAt: Date.now(),
     }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
@@ -176,7 +133,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
       completedAt,
       rawScore,
       rawMax,
-      referenceId: session.referenceId,
+      referenceId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     })
@@ -192,7 +149,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
         <Card className="w-full">
           <CardHeader>
             <CardTitle>Set up your exam</CardTitle>
-            <CardDescription>Official VCAA details can be selected below, or entered manually for a trial exam.</CardDescription>
+            <CardDescription>Enter the paper details and timed conditions.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={start}>
@@ -200,7 +157,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="timer-subject">Subject</FieldLabel>
-                    <Combobox value={subject} inputValue={subject} onValueChange={(value) => changeSubject(value ?? "")} onInputValueChange={changeSubject}>
+                    <Combobox value={subject} inputValue={subject} onValueChange={(value) => setSubject(value ?? "")} onInputValueChange={setSubject}>
                       <ComboboxInput id="timer-subject" placeholder="Search or enter a subject" showClear required />
                       <ComboboxContent>
                         <ComboboxEmpty>No subject found.</ComboboxEmpty>
@@ -214,30 +171,6 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
                   </Field>
                 </div>
 
-                {subjectReferences.length ? (
-                  <Field>
-                    <FieldLabel>Official VCAA exam</FieldLabel>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Select value={comparisonYear?.toString() ?? "none"} onValueChange={selectComparisonYear}>
-                        <SelectTrigger className="w-full"><SelectValue>{comparisonYear ?? "Choose a year"}</SelectValue></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Enter manually</SelectItem>
-                          {comparisonYears.map((year) => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      {yearReferences.length > 1 ? (
-                        <Select value={referenceId ?? ""} onValueChange={(value) => {
-                          const item = references.find((candidate) => candidate.id === value)
-                          if (item) selectReference(item)
-                        }}>
-                          <SelectTrigger className="w-full"><SelectValue>{yearReferences.find((item) => item.id === referenceId) ? formatReferenceName(yearReferences.find((item) => item.id === referenceId)!.name) : "Choose an examination"}</SelectValue></SelectTrigger>
-                          <SelectContent>{yearReferences.map((item) => <SelectItem key={item.id} value={item.id}>{formatReferenceName(item.name)}</SelectItem>)}</SelectContent>
-                        </Select>
-                      ) : null}
-                    </div>
-                    <FieldDescription>Selecting an official exam fills its year and paper.</FieldDescription>
-                  </Field>
-                ) : null}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="timer-year">Exam year</FieldLabel>

@@ -1,0 +1,197 @@
+import { useEffect, useMemo, useState } from "react"
+import { Calculator, Info, Link2, TrendingUp } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { PageHeader } from "@/components/page-header"
+import type { AppData, AssessmentReference } from "@/lib/exam-data"
+import { defaultExamWeight, predictStudyScore } from "@/lib/study-score"
+
+export function StudyScorePredictor({
+  data,
+  references,
+}: {
+  data: AppData
+  references: AssessmentReference[]
+}) {
+  const subjects = useMemo(
+    () => [...new Set(data.attempts.map((attempt) => attempt.subject))].toSorted(),
+    [data.attempts],
+  )
+  const [subject, setSubject] = useState(subjects[0] ?? "")
+  const [sacPercentile, setSacPercentile] = useState("")
+  const [examWeight, setExamWeight] = useState(() => defaultExamWeight(subjects[0] ?? ""))
+
+  useEffect(() => {
+    if (!subjects.includes(subject)) setSubject(subjects[0] ?? "")
+  }, [subject, subjects])
+
+  useEffect(() => {
+    setExamWeight(defaultExamWeight(subject))
+    setSacPercentile("")
+  }, [subject])
+
+  const parsedSac = sacPercentile.trim() === "" ? null : Number(sacPercentile)
+  const prediction = useMemo(
+    () => predictStudyScore({
+      subject,
+      attempts: data.attempts,
+      references,
+      sacPercentile: parsedSac !== null && Number.isFinite(parsedSac) ? parsedSac : null,
+      examWeightPercent: examWeight,
+    }),
+    [data.attempts, examWeight, parsedSac, references, subject],
+  )
+
+  return (
+    <div className="grid gap-6">
+      <PageHeader
+        title="Study score predictor"
+        description="Estimate a raw VCE study score from your official cohort percentiles and SAC standing."
+      />
+
+      {subjects.length === 0 ? (
+        <Empty className="min-h-80 border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Calculator /></EmptyMedia>
+            <EmptyTitle>Log a practice exam first</EmptyTitle>
+            <EmptyDescription>The predictor needs at least one recorded result before it can estimate your exam performance.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+          <Card>
+            <CardHeader>
+              <CardTitle>Assumptions</CardTitle>
+              <CardDescription>Adjust what ExamTrack cannot infer from practice exams.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="predictor-subject">Subject</FieldLabel>
+                  <Select value={subject} onValueChange={(value) => setSubject(value ?? "")}>
+                    <SelectTrigger id="predictor-subject" className="w-full"><SelectValue>{subject}</SelectValue></SelectTrigger>
+                    <SelectContent>
+                      {subjects.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="sac-percentile">Estimated moderated SAC percentile</FieldLabel>
+                  <Input
+                    id="sac-percentile"
+                    type="number"
+                    min="0.1"
+                    max="99.9"
+                    step="0.1"
+                    inputMode="decimal"
+                    placeholder="Optional"
+                    value={sacPercentile}
+                    onChange={(event) => setSacPercentile(event.target.value)}
+                  />
+                  <FieldDescription>
+                    Enter your estimated statewide percentile after moderation. Leave blank to assume it matches your predicted exam percentile.
+                  </FieldDescription>
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="exam-weight">Final examination weighting</FieldLabel>
+                  <div className="relative">
+                    <Input
+                      id="exam-weight"
+                      className="pr-8"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={examWeight}
+                      onChange={(event) => setExamWeight(Number(event.target.value))}
+                    />
+                    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                  </div>
+                  <FieldDescription>Defaults to 60% for Methods and Specialist Mathematics, and 50% for other subjects.</FieldDescription>
+                </Field>
+              </FieldGroup>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6">
+            {prediction ? (
+              <>
+                <Card>
+                  <CardHeader>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <CardTitle>Predicted raw study score</CardTitle>
+                        <CardDescription>Based on {prediction.evidence.length} officially linked attempt{prediction.evidence.length === 1 ? "" : "s"}.</CardDescription>
+                      </div>
+                      <Badge variant="outline">{prediction.confidence} confidence</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="grid gap-6">
+                    <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
+                      <span className="text-6xl font-semibold tracking-tight tabular-nums">{prediction.studyScore}</span>
+                      <span className="pb-1.5 text-base text-muted-foreground tabular-nums">likely range {prediction.low}–{prediction.high}</span>
+                    </div>
+                    <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-3">
+                      <div><p className="text-xs text-muted-foreground">Predicted exam percentile</p><p className="mt-1 text-xl font-semibold tabular-nums">{prediction.examPercentile.toFixed(0)}th</p></div>
+                      <div><p className="text-xs text-muted-foreground">SAC percentile used</p><p className="mt-1 text-xl font-semibold tabular-nums">{prediction.sacPercentile.toFixed(0)}th</p></div>
+                      <div><p className="text-xs text-muted-foreground">Combined percentile</p><p className="mt-1 text-xl font-semibold tabular-nums">{prediction.combinedPercentile.toFixed(0)}th</p></div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Evidence used</CardTitle>
+                    <CardDescription>Recent attempts carry more weight; small samples are pulled towards the statewide median.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="divide-y rounded-lg border">
+                      {[...prediction.evidence].reverse().map(({ attempt, percentile, weight }) => (
+                        <li key={attempt.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{attempt.title} · {attempt.paper}</p>
+                            <p className="text-xs text-muted-foreground">{attempt.completedAt} · {(attempt.rawScore / attempt.rawMax * 100).toFixed(1)}%</p>
+                          </div>
+                          <span className="text-sm font-medium tabular-nums">{percentile.toFixed(0)}th percentile</span>
+                          <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">{(weight * 100).toFixed(0)}% weight</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Empty className="min-h-80 border">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon"><Link2 /></EmptyMedia>
+                  <EmptyTitle>No official comparison available</EmptyTitle>
+                  <EmptyDescription>Log a paper that matches a VCAA examination in the reference data to predict this subject.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            )}
+          </div>
+        </div>
+      )}
+
+      <Alert>
+        <Info />
+        <AlertTitle>Estimate only</AlertTitle>
+        <AlertDescription>
+          This predicts a raw, not scaled, study score. VCAA moderation, exam difficulty, cohort strength and the final statewide distribution can move the result. SAC rank alone is not a statewide percentile.
+        </AlertDescription>
+      </Alert>
+
+      <div className="flex items-start gap-3 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
+        <TrendingUp className="mt-0.5 size-4 shrink-0" />
+        The algorithm models study scores with a statewide mean of 30 and standard deviation of 7, after combining the recency-weighted exam and SAC percentile estimates.
+      </div>
+    </div>
+  )
+}

@@ -18,6 +18,7 @@ export function createChatGPTAuth() {
 
   return createChatGPTHandler({
     secret,
+    clientVersion: "0.144.4",
     sessionStore,
     responsesProxy: {
       allowedModels: (model) => model.startsWith("gpt-5"),

@@ -22,7 +22,7 @@ export function validateMistakeImage(file: Pick<File, "size" | "type">): string 
 
 export function selectChatGPTModel(models: string[], preferredModel = "auto"): string | null {
   if (preferredModel !== "auto" && models.includes(preferredModel)) return preferredModel
-  return models.find((model) => model === "gpt-5.5") ?? models.find((model) => model.startsWith("gpt-5")) ?? null
+  return models.find((model) => model.startsWith("gpt-5")) ?? null
 }
 
 export async function analyseMistakeImage(

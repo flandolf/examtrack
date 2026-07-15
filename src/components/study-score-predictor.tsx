@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AtarEstimator } from "@/components/atar-estimator"
 import { PageHeader } from "@/components/page-header"
+import { SubjectCombobox } from "@/components/subject-combobox"
 import type { AppData, AssessmentReference } from "@/lib/exam-data"
 import { defaultExamWeight, predictStudyScore } from "@/lib/study-score"
 import { predictScaledStudyScore, type ScalingReference } from "@/lib/scaling"
+import { prioritiseSubjects } from "@/lib/subjects"
 
 function usesMethodsWeighting(subject: string) {
   return /mathematical methods|specialist mathematics/i.test(subject)
@@ -27,8 +29,8 @@ export function StudyScorePredictor({
   scalingReferences: ScalingReference[]
 }) {
   const subjects = useMemo(
-    () => [...new Set(data.attempts.map((attempt) => attempt.subject))].toSorted(),
-    [data.attempts],
+    () => prioritiseSubjects(data.attempts.map((attempt) => attempt.subject), data.subjects),
+    [data.attempts, data.subjects],
   )
   const [subject, setSubject] = useState(subjects[0] ?? "")
   const [sacPercentile, setSacPercentile] = useState("")
@@ -98,12 +100,7 @@ export function StudyScorePredictor({
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="predictor-subject">Subject</FieldLabel>
-                  <Select value={subject} onValueChange={(value) => setSubject(value ?? "")}>
-                    <SelectTrigger id="predictor-subject" className="w-full"><SelectValue>{subject}</SelectValue></SelectTrigger>
-                    <SelectContent>
-                      {subjects.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <SubjectCombobox subjects={subjects} preferredSubjects={data.subjects} value={subject} onValueChange={setSubject} id="predictor-subject" className="w-full" />
                 </Field>
 
                 <Field>

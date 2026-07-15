@@ -1,13 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox"
+import { SubjectCombobox } from "@/components/subject-combobox"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -21,10 +14,12 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { analyseAttempt, findAttemptReferenceForYear, formatExamTitle, formatReferenceName, validateAttempt, validateQuestionResults, type AssessmentReference, type ExamAttempt, type QuestionResult } from "@/lib/exam-data"
+import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
 
 type ExamSheetProps = {
   open: boolean
   references: AssessmentReference[]
+  preferredSubjects: string[]
   comparisonYear: number
   initialAttempt?: ExamAttempt | null
   onOpenChange: (open: boolean) => void
@@ -33,8 +28,13 @@ type ExamSheetProps = {
 
 const today = new Date().toISOString().slice(0, 10)
 
-export function ExamSheet({ open, references, comparisonYear, initialAttempt, onOpenChange, onSave }: ExamSheetProps) {
-  const [subject, setSubject] = useState(initialAttempt?.subject ?? "")
+export function ExamSheet({ open, references, preferredSubjects, comparisonYear, initialAttempt, onOpenChange, onSave }: ExamSheetProps) {
+  const subjects = useMemo(
+    () => prioritiseSubjects(references.map((item) => item.studyName), preferredSubjects),
+    [references, preferredSubjects],
+  )
+  const defaultSubject = firstPreferredSubject(subjects, preferredSubjects)
+  const [subject, setSubject] = useState(initialAttempt?.subject ?? defaultSubject)
   const [provider, setProvider] = useState(initialAttempt?.provider ?? "VCAA")
   const [examYear, setExamYear] = useState(initialAttempt?.examYear ?? new Date().getFullYear())
   const [paper, setPaper] = useState(initialAttempt?.paper ?? "")
@@ -45,10 +45,6 @@ export function ExamSheet({ open, references, comparisonYear, initialAttempt, on
   const [questionResults, setQuestionResults] = useState<QuestionResult[]>(initialAttempt?.questionResults ?? [])
   const [error, setError] = useState<string | null>(null)
 
-  const subjects = useMemo(
-    () => [...new Set(references.map((item) => item.studyName))].toSorted(),
-    [references],
-  )
   const paperOptions = useMemo(
     () => [...new Set(references
       .filter((item) => item.studyName.toLowerCase() === subject.trim().toLowerCase())
@@ -58,7 +54,7 @@ export function ExamSheet({ open, references, comparisonYear, initialAttempt, on
   const reference = findAttemptReferenceForYear({ subject, paper }, references, comparisonYear)
   const scaled = reference && rawMax > 0 ? analyseAttempt({ rawScore, rawMax }, reference) : null
   function reset() {
-    setSubject("")
+    setSubject(defaultSubject)
     setProvider("VCAA")
     setExamYear(new Date().getFullYear())
     setPaper("")
@@ -120,22 +116,7 @@ export function ExamSheet({ open, references, comparisonYear, initialAttempt, on
             <div className="grid gap-5 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="subject">Subject</FieldLabel>
-                <Combobox
-                  items={subjects}
-                  inputValue={subject}
-                  value={subjects.includes(subject) ? subject : null}
-                  onInputValueChange={setSubject}
-                  onValueChange={(value) => setSubject(value ?? "")}
-                  autoHighlight
-                >
-                  <ComboboxInput id="subject" placeholder="Search VCAA subjects" showClear />
-                  <ComboboxContent>
-                    <ComboboxEmpty>No matching VCAA subjects.</ComboboxEmpty>
-                    <ComboboxList>
-                      {(item) => <ComboboxItem key={item} value={item}>{item}</ComboboxItem>}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
+                <SubjectCombobox subjects={subjects} preferredSubjects={preferredSubjects} value={subject} onValueChange={setSubject} id="subject" allowCustom placeholder="Search VCAA subjects" />
               </Field>
               <Field>
                 <FieldLabel htmlFor="provider">Provider</FieldLabel>

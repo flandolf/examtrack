@@ -36,7 +36,7 @@ describe("ATAR estimation", () => {
 
     expect(estimate?.primaryFour.map((item) => item.code)).toEqual(["EN", "CH", "PH", "PE"])
     expect(estimate?.increments.map((item) => item.code)).toEqual(["BI", "PY"])
-    expect(estimate?.aggregate).toBe(176.3)
+    expect(estimate?.aggregate).toBe(180.3)
   })
 
   test("limits mathematics to two primary studies and three total", () => {

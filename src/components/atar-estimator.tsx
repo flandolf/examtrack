@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { SubjectCombobox } from "@/components/subject-combobox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -11,6 +12,7 @@ import { estimateAtar, type AtarStudyResult } from "@/lib/atar"
 import { normaliseComparisonName, type AppData, type AssessmentReference } from "@/lib/exam-data"
 import { interpolateScaledScore, type ScalingReference } from "@/lib/scaling"
 import { predictStudyScore } from "@/lib/study-score"
+import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
 
 type Row = {
   id: string
@@ -39,12 +41,18 @@ export function AtarEstimator({
     [scalingReferences],
   )
   const [year, setYear] = useState(years[0] ?? 2025)
-  const studies = useMemo(
-    () => scalingReferences.filter((reference) => reference.year === year)
-      .toSorted((a, b) => a.studyName.localeCompare(b.studyName)),
-    [scalingReferences, year],
-  )
+  const studies = useMemo(() => {
+    const available = scalingReferences.filter((reference) => reference.year === year)
+    const order = new Map(prioritiseSubjects(available.map((study) => study.studyName), data.subjects).map((subject, index) => [subject, index]))
+    return available.toSorted((first, second) => (order.get(first.studyName) ?? 0) - (order.get(second.studyName) ?? 0))
+  }, [data.subjects, scalingReferences, year])
   const [rows, setRows] = useState<Row[]>(() => [newRow()])
+  const firstStudyName = firstPreferredSubject(studies.map((study) => study.studyName), data.subjects)
+  const firstStudyCode = studies.find((study) => study.studyName === firstStudyName)?.code ?? ""
+
+  useEffect(() => {
+    if (firstStudyCode) setRows((current) => current.map((row) => row.code ? row : { ...row, code: firstStudyCode }))
+  }, [firstStudyCode])
 
   const predictions = useMemo(() => {
     const map = new Map<string, number>()
@@ -98,10 +106,7 @@ export function AtarEstimator({
               return (
                 <div key={row.id} className="grid gap-3 rounded-lg border p-3 md:grid-cols-[minmax(14rem,1fr)_9rem_7rem_7rem_auto] md:items-end">
                   <label className="grid gap-1.5 text-sm font-medium">Subject
-                    <Select value={row.code} onValueChange={(value) => updateRow(row.id, { code: value ?? "" })}>
-                      <SelectTrigger><SelectValue>{reference?.studyName ?? "Select subject"}</SelectValue></SelectTrigger>
-                      <SelectContent>{studies.map((item) => <SelectItem key={item.code} value={item.code}>{item.studyName}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <SubjectCombobox subjects={studies.map((study) => study.studyName)} preferredSubjects={data.subjects} value={reference?.studyName ?? ""} onValueChange={(value) => updateRow(row.id, { code: studies.find((study) => study.studyName === value)?.code ?? "" })} />
                   </label>
                   <label className="grid gap-1.5 text-sm font-medium">Source
                     <Select value={usePrediction ? "prediction" : "manual"} onValueChange={(value) => updateRow(row.id, { usePrediction: value === "prediction" })}>
@@ -120,7 +125,7 @@ export function AtarEstimator({
                 </div>
               )
             })}
-            <Button variant="outline" className="justify-self-start" onClick={() => setRows((current) => [...current, newRow()])}><Plus />Add subject</Button>
+            <Button variant="outline" className="justify-self-start" onClick={() => setRows((current) => [...current, newRow(firstStudyCode)])}><Plus />Add subject</Button>
           </CardContent>
         </Card>
 

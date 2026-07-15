@@ -3,7 +3,7 @@ import { CartesianGrid, Dot, Line, LineChart, ReferenceLine, XAxis, YAxis } from
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip } from "@/components/ui/chart"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SubjectCombobox } from "@/components/subject-combobox"
 import {
   analyseAttempt,
   computeDistributionStats,
@@ -11,6 +11,7 @@ import {
   type AssessmentReference,
   type ExamAttempt,
 } from "@/lib/exam-data"
+import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
 
 const chartConfig = {
   percentage: { label: "Mark %", color: "#16a34a" },
@@ -98,16 +99,18 @@ function formatTick(value: number) {
 export function PerformanceTrendChart({
   attempts,
   references,
+  preferredSubjects,
 }: {
   attempts: ExamAttempt[]
   references: AssessmentReference[]
+  preferredSubjects: string[]
 }) {
   const filterId = useId()
   const subjects = useMemo(
-    () => [...new Set(attempts.map((attempt) => attempt.subject))].toSorted(),
-    [attempts],
+    () => prioritiseSubjects(attempts.map((attempt) => attempt.subject), preferredSubjects),
+    [attempts, preferredSubjects],
   )
-  const [subjectFilter, setSubjectFilter] = useState<string>("all")
+  const [subjectFilter, setSubjectFilter] = useState<string>(() => firstPreferredSubject(subjects, preferredSubjects) || "all")
   useEffect(() => {
     if (subjectFilter !== "all" && !subjects.includes(subjectFilter)) {
       setSubjectFilter("all")
@@ -156,19 +159,7 @@ export function PerformanceTrendChart({
               <label htmlFor={`trend-subject-${filterId}`} className="whitespace-nowrap text-sm text-muted-foreground">
                 Subject
               </label>
-              <Select value={subjectFilter} onValueChange={(value) => setSubjectFilter(value ?? "all")}>
-                <SelectTrigger id={`trend-subject-${filterId}`} className="h-8 w-44">
-                  <SelectValue>{subjectFilter === "all" ? "All subjects" : subjectFilter}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All subjects</SelectItem>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject} value={subject}>
-                      {subject}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SubjectCombobox subjects={subjects} preferredSubjects={preferredSubjects} value={subjectFilter} onValueChange={setSubjectFilter} includeAll id={`trend-subject-${filterId}`} className="h-8 w-44" />
             </div>
           ) : null}
         </div>

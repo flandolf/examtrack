@@ -369,6 +369,10 @@ export default function App() {
     })
   }
 
+  function saveSubjects(subjects: string[]) {
+    setData((current) => ({ ...current, subjects, subjectsUpdatedAt: new Date().toISOString() }))
+  }
+
   function saveMistake(mistake: Mistake) {
     setData((current) => ({
       ...current,
@@ -507,16 +511,16 @@ export default function App() {
             </Suspense>
           ) : null}
           {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onReview={reviewMistake} onDelete={deleteMistake} /> : null}
-          {view === "library" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamLibrary references={references} studies={resourceStudies} generatedAt={resourcesGeneratedAt ?? referencesGeneratedAt} onStart={(preset) => { setTimerPreset(preset); setView("timer") }} /></Suspense> : null}
-          {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer key={timerPreset ? `${timerPreset.subject}-${timerPreset.examYear}-${timerPreset.paper}` : "manual"} references={references} initialExam={timerPreset} onSave={(attempt) => { setTimerPreset(null); saveTimedAttempt(attempt) }} /></Suspense> : null}
+          {view === "library" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamLibrary references={references} studies={resourceStudies} generatedAt={resourcesGeneratedAt ?? referencesGeneratedAt} preferredSubjects={data.subjects} onStart={(preset) => { setTimerPreset(preset); setView("timer") }} /></Suspense> : null}
+          {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer key={timerPreset ? `${timerPreset.subject}-${timerPreset.examYear}-${timerPreset.paper}` : "manual"} references={references} preferredSubjects={data.subjects} initialExam={timerPreset} onSave={(attempt) => { setTimerPreset(null); saveTimedAttempt(attempt) }} /></Suspense> : null}
           {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} scalingReferences={scalingReferences} /></Suspense> : null}
-          {view === "vcaa" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><VcaaExplorer references={references} attempts={data.attempts} /></Suspense> : null}
-          {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage sync={sync} /></Suspense> : null}
+          {view === "vcaa" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><VcaaExplorer references={references} attempts={data.attempts} preferredSubjects={data.subjects} /></Suspense> : null}
+          {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage sync={sync} subjects={[...new Set(references.map((reference) => reference.studyName))]} selectedSubjects={data.subjects} onSubjectsChange={saveSubjects} /></Suspense> : null}
         </main>
       </SidebarInset>
       {examOpen ? (
         <Suspense fallback={null}>
-          <ExamSheet open references={references} comparisonYear={comparisonYear} initialAttempt={editingAttempt} onOpenChange={setExamOpen} onSave={saveAttempt} />
+          <ExamSheet open references={references} preferredSubjects={data.subjects} comparisonYear={comparisonYear} initialAttempt={editingAttempt} onOpenChange={setExamOpen} onSave={saveAttempt} />
         </Suspense>
       ) : null}
       {mistakeOpen ? (

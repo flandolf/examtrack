@@ -7,17 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageHeader } from "@/components/page-header"
+import { SubjectCombobox } from "@/components/subject-combobox"
 import {
   buildVcaaYearInsights,
   formatReferenceName,
@@ -25,6 +18,7 @@ import {
   type AssessmentReference,
   type ExamAttempt,
 } from "@/lib/exam-data"
+import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
 
 const chartConfig = {
   aPlusCutoffPercentage: { label: "A+ cutoff", color: "#dc2626" },
@@ -36,13 +30,13 @@ function formatPercent(value: number | null) {
   return value === null ? "—" : `${value.toFixed(1)}%`
 }
 
-export function VcaaExplorer({ references, attempts }: { references: AssessmentReference[]; attempts: ExamAttempt[] }) {
+export function VcaaExplorer({ references, attempts, preferredSubjects }: { references: AssessmentReference[]; attempts: ExamAttempt[]; preferredSubjects: string[] }) {
   const latestAttempt = attempts.toSorted((a, b) => b.completedAt.localeCompare(a.completedAt))[0]
   const subjects = useMemo(
-    () => [...new Set(references.map((reference) => reference.studyName))].toSorted(),
-    [references],
+    () => prioritiseSubjects(references.map((reference) => reference.studyName), preferredSubjects),
+    [preferredSubjects, references],
   )
-  const initialSubject = subjects.includes(latestAttempt?.subject) ? latestAttempt.subject : (subjects[0] ?? "")
+  const initialSubject = firstPreferredSubject(subjects, preferredSubjects) || (subjects.includes(latestAttempt?.subject) ? latestAttempt.subject : (subjects[0] ?? ""))
   const [subjectValue, setSubject] = useState(initialSubject)
   const subject = subjects.includes(subjectValue) ? subjectValue : initialSubject
   const subjectReferences = references.filter((reference) => reference.studyName === subject)
@@ -88,13 +82,7 @@ export function VcaaExplorer({ references, attempts }: { references: AssessmentR
         <CardContent className="grid gap-4 md:grid-cols-3">
           <div className="grid gap-2">
             <Label htmlFor="vcaa-subject">Subject</Label>
-            <Combobox items={subjects} value={subject} onValueChange={(value) => { setSubject(value ?? ""); setPaper("") }} autoHighlight>
-              <ComboboxInput id="vcaa-subject" className="w-full" placeholder="Search VCAA subjects" />
-              <ComboboxContent>
-                <ComboboxEmpty>No matching VCAA subjects.</ComboboxEmpty>
-                <ComboboxList>{(item) => <ComboboxItem key={item} value={item}>{item}</ComboboxItem>}</ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+            <SubjectCombobox subjects={subjects} preferredSubjects={preferredSubjects} value={subject} onValueChange={(value) => { setSubject(value); setPaper("") }} id="vcaa-subject" className="w-full" placeholder="Search VCAA subjects" />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="vcaa-paper">Exam</Label>

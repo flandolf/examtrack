@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeader } from "@/components/page-header"
 import type { AppData, AssessmentReference } from "@/lib/exam-data"
 import { defaultExamWeight, predictStudyScore } from "@/lib/study-score"
+import { predictScaledStudyScore, type ScalingReference } from "@/lib/scaling"
 
 function usesMethodsWeighting(subject: string) {
   return /mathematical methods|specialist mathematics/i.test(subject)
@@ -18,9 +19,11 @@ function usesMethodsWeighting(subject: string) {
 export function StudyScorePredictor({
   data,
   references,
+  scalingReferences,
 }: {
   data: AppData
   references: AssessmentReference[]
+  scalingReferences: ScalingReference[]
 }) {
   const subjects = useMemo(
     () => [...new Set(data.attempts.map((attempt) => attempt.subject))].toSorted(),
@@ -49,6 +52,10 @@ export function StudyScorePredictor({
       examWeightPercent: examWeight,
     }),
     [data.attempts, examWeight, parsedSac, references, subject],
+  )
+  const scaledPrediction = useMemo(
+    () => prediction ? predictScaledStudyScore(prediction.studyScore, subject, scalingReferences) : null,
+    [prediction, scalingReferences, subject],
   )
 
   return (
@@ -146,9 +153,27 @@ export function StudyScorePredictor({
                     </div>
                   </CardHeader>
                   <CardContent className="grid gap-6">
-                    <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
-                      <span className="text-6xl font-semibold tracking-tight tabular-nums">{prediction.studyScore}</span>
-                      <span className="pb-1.5 text-base text-muted-foreground tabular-nums">likely range {prediction.low}–{prediction.high}</span>
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Raw</p>
+                        <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-1">
+                          <span className="text-6xl font-semibold tracking-tight tabular-nums">{prediction.studyScore}</span>
+                          <span className="pb-1.5 text-base text-muted-foreground tabular-nums">likely range {prediction.low}–{prediction.high}</span>
+                        </div>
+                      </div>
+                      {scaledPrediction ? (
+                        <div className="border-t pt-4 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Scaled estimate</p>
+                          <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-1">
+                            <span className="text-6xl font-semibold tracking-tight tabular-nums">{scaledPrediction.scaledScore.toFixed(1)}</span>
+                            <span className="pb-1.5 text-sm text-muted-foreground tabular-nums">historical range {scaledPrediction.minimum.toFixed(1)}–{scaledPrediction.maximum.toFixed(1)}</span>
+                          </div>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            Average of {scaledPrediction.yearEstimates.length} VTAC scaling reports ({scaledPrediction.yearEstimates[0]?.year}–{scaledPrediction.yearEstimates.at(-1)?.year}).{" "}
+                            <a className="underline underline-offset-4 hover:text-foreground" href={scaledPrediction.yearEstimates.at(-1)?.sourceUrl} target="_blank" rel="noreferrer">Latest report</a>
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-4">
                       {prediction.components.map((component) => (
@@ -202,7 +227,7 @@ export function StudyScorePredictor({
         <Info />
         <AlertTitle>Estimate only</AlertTitle>
         <AlertDescription>
-          This predicts a raw, not scaled, study score. VCAA moderation, exam difficulty, cohort strength and the final statewide distribution can move the result. SAC rank alone is not a statewide percentile.
+          Raw scores remain uncertain because VCAA moderation, exam difficulty, cohort strength and the final statewide distribution can move the result. The scaled estimate interpolates between VTAC's published 20, 25, 30, 35, 40, 45 and 50 rows; the official process uses unrounded values and changes each year.
         </AlertDescription>
       </Alert>
 

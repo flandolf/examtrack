@@ -99,10 +99,10 @@ export function predictStudyScore({
     0,
   ) / weightTotal
 
-  // Small samples are pulled towards the statewide median to reduce dramatic
-  // predictions from a single unusually easy or difficult practice paper.
-  const reliability = weightTotal / (weightTotal + 1.5)
-  const examPercentile = 50 + reliability * (observedExamPercentile - 50)
+  // Keep the point estimate centred on the student's actual weighted results.
+  // Limited evidence belongs in the uncertainty range, not as a systematic
+  // bias that drags strong or weak students towards the statewide median.
+  const examPercentile = observedExamPercentile
   const resolvedSacPercentile = sacPercentile == null
     ? examPercentile
     : clamp(sacPercentile, 0.1, 99.9)
@@ -116,9 +116,9 @@ export function predictStudyScore({
   const effectiveSampleSize = weightTotal ** 2 /
     evidence.reduce((total, item) => total + item.weight ** 2, 0)
   const percentileUncertainty = clamp(
-    6 + Math.sqrt(variance) / Math.sqrt(effectiveSampleSize) + 10 * (1 - reliability),
-    6,
-    22,
+    (12 + Math.sqrt(variance)) / Math.sqrt(effectiveSampleSize),
+    3,
+    18,
   ) * examWeight
   const lowPercentile = clamp(combinedPercentile - percentileUncertainty, 0.1, 99.9)
   const highPercentile = clamp(combinedPercentile + percentileUncertainty, 0.1, 99.9)

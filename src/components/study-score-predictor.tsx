@@ -32,6 +32,7 @@ export function StudyScorePredictor({
   const [subject, setSubject] = useState(subjects[0] ?? "")
   const [sacPercentile, setSacPercentile] = useState("")
   const [examWeight, setExamWeight] = useState(() => defaultExamWeight(subjects[0] ?? ""))
+  const [scalingYear, setScalingYear] = useState("combined")
 
   useEffect(() => {
     if (!subjects.includes(subject)) setSubject(subjects[0] ?? "")
@@ -40,6 +41,7 @@ export function StudyScorePredictor({
   useEffect(() => {
     setExamWeight(defaultExamWeight(subject))
     setSacPercentile("")
+    setScalingYear("combined")
   }, [subject])
 
   const parsedSac = sacPercentile.trim() === "" ? null : Number(sacPercentile)
@@ -53,9 +55,20 @@ export function StudyScorePredictor({
     }),
     [data.attempts, examWeight, parsedSac, references, subject],
   )
+  const scalingYears = useMemo(
+    () => [...new Set(scalingReferences
+      .filter((reference) => reference.studyName.toLowerCase() === subject.toLowerCase())
+      .map((reference) => reference.year))].toSorted((first, second) => second - first),
+    [scalingReferences, subject],
+  )
   const scaledPrediction = useMemo(
-    () => prediction ? predictScaledStudyScore(prediction.studyScore, subject, scalingReferences) : null,
-    [prediction, scalingReferences, subject],
+    () => prediction ? predictScaledStudyScore(
+      prediction.studyScore,
+      subject,
+      scalingReferences,
+      scalingYear === "combined" ? null : Number(scalingYear),
+    ) : null,
+    [prediction, scalingReferences, scalingYear, subject],
   )
 
   return (
@@ -163,14 +176,27 @@ export function StudyScorePredictor({
                       </div>
                       {scaledPrediction ? (
                         <div className="border-t pt-4 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Scaled estimate</p>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Scaled estimate</p>
+                            <Select value={scalingYear} onValueChange={(value) => setScalingYear(value ?? "combined")}>
+                              <SelectTrigger aria-label="Scaling report year" size="sm" className="w-auto min-w-32">
+                                <SelectValue>{scalingYear === "combined" ? "Combined" : scalingYear}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent align="end">
+                                <SelectItem value="combined">Combined ({Math.min(...scalingYears)}–{Math.max(...scalingYears)})</SelectItem>
+                                {scalingYears.map((year) => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-1">
                             <span className="text-6xl font-semibold tracking-tight tabular-nums">{scaledPrediction.scaledScore.toFixed(1)}</span>
-                            <span className="pb-1.5 text-sm text-muted-foreground tabular-nums">historical range {scaledPrediction.minimum.toFixed(1)}–{scaledPrediction.maximum.toFixed(1)}</span>
+                            {scaledPrediction.yearEstimates.length > 1 ? <span className="pb-1.5 text-sm text-muted-foreground tabular-nums">historical range {scaledPrediction.minimum.toFixed(1)}–{scaledPrediction.maximum.toFixed(1)}</span> : null}
                           </div>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Average of {scaledPrediction.yearEstimates.length} VTAC scaling reports ({scaledPrediction.yearEstimates[0]?.year}–{scaledPrediction.yearEstimates.at(-1)?.year}).{" "}
-                            <a className="underline underline-offset-4 hover:text-foreground" href={scaledPrediction.yearEstimates.at(-1)?.sourceUrl} target="_blank" rel="noreferrer">Latest report</a>
+                            {scaledPrediction.yearEstimates.length > 1
+                              ? `Average of ${scaledPrediction.yearEstimates.length} VTAC scaling reports (${scaledPrediction.yearEstimates[0]?.year}–${scaledPrediction.yearEstimates.at(-1)?.year}).`
+                              : `Based on the ${scaledPrediction.yearEstimates[0]?.year} VTAC scaling report.`}{" "}
+                            <a className="underline underline-offset-4 hover:text-foreground" href={scaledPrediction.yearEstimates.at(-1)?.sourceUrl} target="_blank" rel="noreferrer">View report</a>
                           </p>
                         </div>
                       ) : null}

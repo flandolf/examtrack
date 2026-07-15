@@ -56,10 +56,33 @@ describe("study score prediction", () => {
     expect(prediction).not.toBeNull()
     expect(prediction?.evidence).toHaveLength(2)
     expect(prediction?.confidence).toBe("Medium")
+    expect(prediction?.examPercentile).toBeCloseTo(prediction?.observedExamPercentile ?? 0, 8)
     expect(prediction?.combinedPercentile).toBeGreaterThan(70)
     expect(prediction?.studyScore).toBeGreaterThanOrEqual(34)
     expect(prediction?.low).toBeLessThan(prediction?.studyScore ?? 0)
     expect(prediction?.high).toBeGreaterThan(prediction?.studyScore ?? 50)
+  })
+
+  test("does not drag a consistent high-percentile sample towards the median", () => {
+    const prediction = predictStudyScore({
+      subject: "Mathematical Methods",
+      attempts: [
+        attempt("one", 37, "2026-01-01"),
+        attempt("two", 38, "2026-02-01"),
+        attempt("three", 39, "2026-03-01"),
+        attempt("four", 38, "2026-04-01"),
+        attempt("five", 39, "2026-05-01"),
+        attempt("six", 40, "2026-06-01"),
+      ],
+      references: [reference],
+      sacPercentile: 90,
+      examWeightPercent: 60,
+    })
+
+    expect(prediction?.evidence).toHaveLength(6)
+    expect(prediction?.examPercentile).toBeCloseTo(prediction?.observedExamPercentile ?? 0, 8)
+    expect(prediction?.examPercentile).toBeGreaterThan(90)
+    expect(prediction?.combinedPercentile).toBeGreaterThan(90)
   })
 
   test("returns no prediction without an official linked result", () => {

@@ -11,6 +11,14 @@ export type StudyScoreEvidence = {
   weight: number
 }
 
+export type StudyScoreComponent = {
+  label: string
+  percentile: number
+  weightPercent: number
+  evidenceCount: number
+  projected: boolean
+}
+
 export type StudyScorePrediction = {
   studyScore: number
   low: number
@@ -22,6 +30,7 @@ export type StudyScorePrediction = {
   examWeightPercent: number
   confidence: "Low" | "Medium" | "High"
   evidence: StudyScoreEvidence[]
+  components: StudyScoreComponent[]
 }
 
 function clamp(value: number, minimum: number, maximum: number) {
@@ -64,6 +73,44 @@ export function defaultExamWeight(subject: string): number {
   return /mathematical methods|specialist mathematics/i.test(subject) ? 60 : 50
 }
 
+function isTwoPaperMathematics(subject: string) {
+  return /mathematical methods|specialist mathematics/i.test(subject)
+}
+
+function paperNumber(paper: string): 1 | 2 | null {
+  const match = paper.match(/(?:exam(?:ination)?|paper)\s*([12])\b/i)
+  return match?.[1] === "1" ? 1 : match?.[1] === "2" ? 2 : null
+}
+
+function weightEvidence(items: Array<{ attempt: ExamAttempt; percentile: number }>): StudyScoreEvidence[] {
+  return items
+    .toSorted((first, second) => first.attempt.completedAt.localeCompare(second.attempt.completedAt))
+    .map((item, index) => ({
+      ...item,
+      weight: 0.82 ** (items.length - index - 1),
+    }))
+}
+
+function summariseEvidence(evidence: StudyScoreEvidence[]) {
+  const weightTotal = evidence.reduce((total, item) => total + item.weight, 0)
+  const percentile = evidence.reduce(
+    (total, item) => total + item.percentile * item.weight,
+    0,
+  ) / weightTotal
+  const variance = evidence.reduce(
+    (total, item) => total + item.weight * (item.percentile - percentile) ** 2,
+    0,
+  ) / weightTotal
+  const effectiveSampleSize = weightTotal ** 2 /
+    evidence.reduce((total, item) => total + item.weight ** 2, 0)
+  const uncertainty = clamp(
+    (12 + Math.sqrt(variance)) / Math.sqrt(effectiveSampleSize),
+    3,
+    18,
+  )
+  return { percentile, variance, uncertainty }
+}
+
 export function predictStudyScore({
   subject,
   attempts,
@@ -85,44 +132,70 @@ export function predictStudyScore({
       const percentile = analyseAttempt(attempt, reference).percentile
       return percentile === null ? [] : [{ attempt, percentile }]
     })
-    .toSorted((first, second) => first.attempt.completedAt.localeCompare(second.attempt.completedAt))
 
   if (linked.length === 0) return null
 
-  const evidence = linked.map((item, index) => ({
-    ...item,
-    weight: 0.82 ** (linked.length - index - 1),
-  }))
-  const weightTotal = evidence.reduce((total, item) => total + item.weight, 0)
-  const observedExamPercentile = evidence.reduce(
-    (total, item) => total + item.percentile * item.weight,
-    0,
-  ) / weightTotal
+  const allEvidence = weightEvidence(linked)
+  const overall = summariseEvidence(allEvidence)
+  let evidence = allEvidence
+  let examPercentile = overall.percentile
+  let combinedExamContribution = 0
+  let examUncertainty = 0
+  let resolvedExamWeightPercent = clamp(examWeightPercent, 0, 100)
+  let components: StudyScoreComponent[] = []
+
+  if (isTwoPaperMathematics(subject)) {
+    const definitions = [
+      { number: 1 as const, label: "Exam 1", weightPercent: 20 },
+      { number: 2 as const, label: "Exam 2", weightPercent: 40 },
+    ]
+    const componentEvidence = definitions.map((definition) => {
+      const matched = weightEvidence(linked.filter((item) => paperNumber(item.attempt.paper) === definition.number))
+      const summary = matched.length ? summariseEvidence(matched) : overall
+      return { ...definition, matched, summary }
+    })
+    evidence = componentEvidence.flatMap((component) => component.matched)
+    if (evidence.length < linked.length) evidence = allEvidence
+    components = componentEvidence.map((component) => ({
+      label: component.label,
+      percentile: component.summary.percentile,
+      weightPercent: component.weightPercent,
+      evidenceCount: component.matched.length,
+      projected: component.matched.length === 0,
+    }))
+    resolvedExamWeightPercent = 60
+    combinedExamContribution = componentEvidence.reduce(
+      (total, component) => total + component.summary.percentile * component.weightPercent / 100,
+      0,
+    )
+    examPercentile = combinedExamContribution / 0.6
+    examUncertainty = Math.sqrt(componentEvidence.reduce(
+      (total, component) => total + (component.summary.uncertainty * component.weightPercent / 100) ** 2,
+      0,
+    ))
+  } else {
+    components = [{
+      label: "Final examination",
+      percentile: overall.percentile,
+      weightPercent: resolvedExamWeightPercent,
+      evidenceCount: linked.length,
+      projected: false,
+    }]
+    combinedExamContribution = overall.percentile * resolvedExamWeightPercent / 100
+    examUncertainty = overall.uncertainty * resolvedExamWeightPercent / 100
+  }
 
   // Keep the point estimate centred on the student's actual weighted results.
   // Limited evidence belongs in the uncertainty range, not as a systematic
   // bias that drags strong or weak students towards the statewide median.
-  const examPercentile = observedExamPercentile
   const resolvedSacPercentile = sacPercentile == null
     ? examPercentile
     : clamp(sacPercentile, 0.1, 99.9)
-  const examWeight = clamp(examWeightPercent, 0, 100) / 100
-  const combinedPercentile = examPercentile * examWeight + resolvedSacPercentile * (1 - examWeight)
-
-  const variance = evidence.reduce(
-    (total, item) => total + item.weight * (item.percentile - observedExamPercentile) ** 2,
-    0,
-  ) / weightTotal
-  const effectiveSampleSize = weightTotal ** 2 /
-    evidence.reduce((total, item) => total + item.weight ** 2, 0)
-  const percentileUncertainty = clamp(
-    (12 + Math.sqrt(variance)) / Math.sqrt(effectiveSampleSize),
-    3,
-    18,
-  ) * examWeight
-  const lowPercentile = clamp(combinedPercentile - percentileUncertainty, 0.1, 99.9)
-  const highPercentile = clamp(combinedPercentile + percentileUncertainty, 0.1, 99.9)
-  const confidence = linked.length >= 5 && Math.sqrt(variance) <= 15
+  const sacWeightPercent = 100 - resolvedExamWeightPercent
+  const combinedPercentile = combinedExamContribution + resolvedSacPercentile * sacWeightPercent / 100
+  const lowPercentile = clamp(combinedPercentile - examUncertainty, 0.1, 99.9)
+  const highPercentile = clamp(combinedPercentile + examUncertainty, 0.1, 99.9)
+  const confidence = linked.length >= 5 && Math.sqrt(overall.variance) <= 15 && components.every((item) => !item.projected)
     ? "High"
     : linked.length >= 2
       ? "Medium"
@@ -134,10 +207,11 @@ export function predictStudyScore({
     high: Math.min(50, Math.ceil(percentileToRawStudyScore(highPercentile))),
     combinedPercentile,
     examPercentile,
-    observedExamPercentile,
+    observedExamPercentile: overall.percentile,
     sacPercentile: resolvedSacPercentile,
-    examWeightPercent: examWeight * 100,
+    examWeightPercent: resolvedExamWeightPercent,
     confidence,
     evidence,
+    components,
   }
 }

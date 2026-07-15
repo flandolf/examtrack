@@ -11,6 +11,10 @@ import { PageHeader } from "@/components/page-header"
 import type { AppData, AssessmentReference } from "@/lib/exam-data"
 import { defaultExamWeight, predictStudyScore } from "@/lib/study-score"
 
+function usesMethodsWeighting(subject: string) {
+  return /mathematical methods|specialist mathematics/i.test(subject)
+}
+
 export function StudyScorePredictor({
   data,
   references,
@@ -99,23 +103,31 @@ export function StudyScorePredictor({
                   </FieldDescription>
                 </Field>
 
-                <Field>
-                  <FieldLabel htmlFor="exam-weight">Final examination weighting</FieldLabel>
-                  <div className="relative">
-                    <Input
-                      id="exam-weight"
-                      className="pr-8"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={examWeight}
-                      onChange={(event) => setExamWeight(Number(event.target.value))}
-                    />
-                    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                {usesMethodsWeighting(subject) ? (
+                  <div className="grid grid-cols-3 gap-2 rounded-lg border bg-muted/30 p-3 text-center">
+                    <div><p className="text-xs text-muted-foreground">Exam 1</p><p className="font-semibold tabular-nums">20%</p></div>
+                    <div><p className="text-xs text-muted-foreground">Exam 2</p><p className="font-semibold tabular-nums">40%</p></div>
+                    <div><p className="text-xs text-muted-foreground">SACs</p><p className="font-semibold tabular-nums">40%</p></div>
                   </div>
-                  <FieldDescription>Defaults to 60% for Methods and Specialist Mathematics, and 50% for other subjects.</FieldDescription>
-                </Field>
+                ) : (
+                  <Field>
+                    <FieldLabel htmlFor="exam-weight">Final examination weighting</FieldLabel>
+                    <div className="relative">
+                      <Input
+                        id="exam-weight"
+                        className="pr-8"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={examWeight}
+                        onChange={(event) => setExamWeight(Number(event.target.value))}
+                      />
+                      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                    </div>
+                    <FieldDescription>The remaining percentage is assigned to SACs.</FieldDescription>
+                  </Field>
+                )}
               </FieldGroup>
             </CardContent>
           </Card>
@@ -138,8 +150,14 @@ export function StudyScorePredictor({
                       <span className="text-6xl font-semibold tracking-tight tabular-nums">{prediction.studyScore}</span>
                       <span className="pb-1.5 text-base text-muted-foreground tabular-nums">likely range {prediction.low}–{prediction.high}</span>
                     </div>
-                    <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-3">
-                      <div><p className="text-xs text-muted-foreground">Predicted exam percentile</p><p className="mt-1 text-xl font-semibold tabular-nums">{prediction.examPercentile.toFixed(0)}th</p></div>
+                    <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {prediction.components.map((component) => (
+                        <div key={component.label}>
+                          <p className="text-xs text-muted-foreground">{component.label} · {component.weightPercent}%</p>
+                          <p className="mt-1 text-xl font-semibold tabular-nums">{component.percentile.toFixed(0)}th</p>
+                          {component.projected ? <p className="text-xs text-muted-foreground">Projected from available exams</p> : null}
+                        </div>
+                      ))}
                       <div><p className="text-xs text-muted-foreground">SAC percentile used</p><p className="mt-1 text-xl font-semibold tabular-nums">{prediction.sacPercentile.toFixed(0)}th</p></div>
                       <div><p className="text-xs text-muted-foreground">Combined percentile</p><p className="mt-1 text-xl font-semibold tabular-nums">{prediction.combinedPercentile.toFixed(0)}th</p></div>
                     </div>

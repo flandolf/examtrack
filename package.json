@@ -10,6 +10,7 @@
     "lint": "oxlint",
     "test": "bun test",
     "vcaa:import": "bun vcaa/import-all-grade-distributions.mjs",
+    "vtac:import": "bun vtac/import-scaling-reports.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

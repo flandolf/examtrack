@@ -44,10 +44,14 @@ export function predictScaledStudyScore(
   rawScore: number,
   subject: string,
   references: ScalingReference[],
+  year?: number | null,
 ): ScaledStudyScorePrediction | null {
   const subjectKey = normaliseComparisonName(subject)
   const yearEstimates = references
-    .filter((reference) => normaliseComparisonName(reference.studyName) === subjectKey)
+    .filter((reference) =>
+      normaliseComparisonName(reference.studyName) === subjectKey &&
+      (year == null || reference.year === year),
+    )
     .flatMap((reference) => {
       const scaledScore = interpolateScaledScore(rawScore, reference.points)
       return scaledScore === null ? [] : [{ year: reference.year, scaledScore, sourceUrl: reference.sourceUrl }]

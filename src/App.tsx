@@ -59,6 +59,7 @@ import { downloadAppData, loadAppData, parseAppDataFile, saveAppData } from "@/l
 import { buildRevisionPriorities, buildRevisionQueue } from "@/lib/mistake-review"
 import { useSupabaseSync } from "@/lib/sync"
 import { loadTimetable, suggestTimetableForAttempt, formatExamLabel, type Timetable } from "@/lib/timetable"
+import type { ScalingReference } from "@/lib/scaling"
 import { ExamTrackerPicker } from "@/components/exam-tracker-picker"
 
 const ExamSheet = lazy(() =>
@@ -243,6 +244,7 @@ export default function App() {
   const [view, setView] = useState<View>("dashboard")
   const [data, setData] = useState<AppData>(() => (typeof localStorage === "undefined" ? EMPTY_APP_DATA : loadAppData()))
   const [references, setReferences] = useState<AssessmentReference[]>([])
+  const [scalingReferences, setScalingReferences] = useState<ScalingReference[]>([])
   const [comparisonYear, setComparisonYear] = useState(2025)
   const [examOpen, setExamOpen] = useState(false)
   const [editingAttempt, setEditingAttempt] = useState<ExamAttempt | null>(null)
@@ -274,6 +276,15 @@ export default function App() {
       })
       .then((result) => setReferences(Array.isArray(result.assessments) ? result.assessments : []))
       .catch(() => setReferences([]))
+  }, [])
+  useEffect(() => {
+    fetch("/vtac-scaling-reports.json")
+      .then((response) => {
+        if (!response.ok) throw new Error("Scaling reference data request failed")
+        return response.json() as Promise<{ references?: ScalingReference[] }>
+      })
+      .then((result) => setScalingReferences(Array.isArray(result.references) ? result.references : []))
+      .catch(() => setScalingReferences([]))
   }, [])
   useEffect(() => {
     let cancelled = false
@@ -458,7 +469,7 @@ export default function App() {
           ) : null}
           {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onToggle={toggleMistake} onDelete={deleteMistake} /> : null}
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer references={references} onSave={saveTimedAttempt} /></Suspense> : null}
-          {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} /></Suspense> : null}
+          {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} scalingReferences={scalingReferences} /></Suspense> : null}
           {view === "vcaa" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><VcaaExplorer references={references} attempts={data.attempts} /></Suspense> : null}
           {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage sync={sync} /></Suspense> : null}
         </main>

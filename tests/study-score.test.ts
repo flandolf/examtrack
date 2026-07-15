@@ -36,6 +36,21 @@ function attempt(id: string, rawScore: number, completedAt: string): ExamAttempt
   }
 }
 
+const reference2: AssessmentReference = {
+  ...reference,
+  id: "METHODS:2025:GA-3",
+  gaCode: "GA 3",
+  name: "WRITTEN EXAMINATION 2",
+}
+
+function exam2Attempt(id: string, rawScore: number, completedAt: string): ExamAttempt {
+  return {
+    ...attempt(id, rawScore, completedAt),
+    paper: "Exam 2",
+    referenceId: reference2.id,
+  }
+}
+
 describe("study score prediction", () => {
   test("maps the statewide median and common percentiles to raw study scores", () => {
     expect(inverseNormalCdf(0.5)).toBeCloseTo(0, 8)
@@ -83,6 +98,25 @@ describe("study score prediction", () => {
     expect(prediction?.examPercentile).toBeCloseTo(prediction?.observedExamPercentile ?? 0, 8)
     expect(prediction?.examPercentile).toBeGreaterThan(90)
     expect(prediction?.combinedPercentile).toBeGreaterThan(90)
+  })
+
+  test("applies the Methods 20:40:40 assessment weighting", () => {
+    const prediction = predictStudyScore({
+      subject: "Mathematical Methods",
+      attempts: [
+        attempt("exam-one", 32, "2026-05-01"),
+        exam2Attempt("exam-two", 40, "2026-06-01"),
+      ],
+      references: [reference, reference2],
+      sacPercentile: 90,
+    })
+
+    expect(prediction?.components).toEqual([
+      expect.objectContaining({ label: "Exam 1", percentile: 80, weightPercent: 20 }),
+      expect.objectContaining({ label: "Exam 2", percentile: 100, weightPercent: 40 }),
+    ])
+    expect(prediction?.sacPercentile).toBe(90)
+    expect(prediction?.combinedPercentile).toBeCloseTo(92, 8)
   })
 
   test("returns no prediction without an official linked result", () => {

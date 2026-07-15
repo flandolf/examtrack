@@ -149,7 +149,7 @@ export function StudyScorePredictor({
                 <Card>
                   <CardHeader>
                     <CardTitle>Evidence used</CardTitle>
-                    <CardDescription>Recent attempts carry more weight; small samples are pulled towards the statewide median.</CardDescription>
+                    <CardDescription>Recent attempts carry more weight; smaller or less consistent samples produce a wider likely range.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ul className="divide-y rounded-lg border">

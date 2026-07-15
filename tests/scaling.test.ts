@@ -39,6 +39,12 @@ describe("VTAC scaling", () => {
       minimum: 46,
       maximum: 47,
     })
+    expect(predictScaledStudyScore(40, "Mathematical Methods", references, 2025)).toMatchObject({
+      scaledScore: 47,
+      minimum: 47,
+      maximum: 47,
+      yearEstimates: [expect.objectContaining({ year: 2025 })],
+    })
   })
 
   test("bundles valid and unique 2021–2025 scaling references", () => {

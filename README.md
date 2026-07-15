@@ -43,4 +43,10 @@ bun run build
 bun run vcaa:import
 ```
 
+`public/vtac-scaling-reports.json` contains the official 2021–2025 VTAC scaling tables. Regenerate it directly from the published PDFs with:
+
+```bash
+bun run vtac:import
+```
+
 The importer uses PDF.js and does not require Poppler or `pdftotext`.

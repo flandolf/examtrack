@@ -7,6 +7,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AtarEstimator } from "@/components/atar-estimator"
 import { PageHeader } from "@/components/page-header"
 import type { AppData, AssessmentReference } from "@/lib/exam-data"
 import { defaultExamWeight, predictStudyScore } from "@/lib/study-score"
@@ -72,10 +73,10 @@ export function StudyScorePredictor({
   )
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-8">
       <PageHeader
-        title="Study score predictor"
-        description="Estimate a raw VCE study score from your official cohort percentiles and SAC standing."
+        title="Study score and ATAR"
+        description="Estimate raw and scaled study scores, then combine subjects into a historical ATAR estimate."
       />
 
       {subjects.length === 0 ? (
@@ -83,7 +84,7 @@ export function StudyScorePredictor({
           <EmptyHeader>
             <EmptyMedia variant="icon"><Calculator /></EmptyMedia>
             <EmptyTitle>Log a practice exam first</EmptyTitle>
-            <EmptyDescription>The predictor needs at least one recorded result before it can estimate your exam performance.</EmptyDescription>
+            <EmptyDescription>The study-score predictor needs at least one recorded result. You can still enter raw study scores manually in the ATAR estimator below.</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -253,7 +254,7 @@ export function StudyScorePredictor({
         <Info />
         <AlertTitle>Estimate only</AlertTitle>
         <AlertDescription>
-          Raw scores remain uncertain because VCAA moderation, exam difficulty, cohort strength and the final statewide distribution can move the result. The scaled estimate interpolates between VTAC's published 20, 25, 30, 35, 40, 45 and 50 rows; the official process uses unrounded values and changes each year.
+          Raw scores remain uncertain because VCAA moderation, exam difficulty, cohort strength and the final statewide distribution can move the result. The scaled estimate interpolates between VTAC&apos;s published 20, 25, 30, 35, 40, 45 and 50 rows; the official process uses unrounded values and changes each year.
         </AlertDescription>
       </Alert>
 
@@ -261,6 +262,8 @@ export function StudyScorePredictor({
         <TrendingUp className="mt-0.5 size-4 shrink-0" />
         The algorithm models study scores with a statewide mean of 30 and standard deviation of 7, after combining the recency-weighted exam and SAC percentile estimates.
       </div>
+
+      <AtarEstimator data={data} references={references} scalingReferences={scalingReferences} />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { analyseAttempt, analyseScore, buildAttemptBenchmarks, buildSubjectBenchmarks, buildVcaaYearInsights, computeDistributionStats, findAttemptReferenceForYear, formatExamTitle, getAttemptPoints, isAppData, matchesAttemptReference, migrateAppData, removeAttempt, validateAttempt, validateMistakeMarks, type AssessmentReference, type ExamAttempt } from "../src/lib/exam-data"
+import { analyseAttempt, analyseScore, buildAttemptBenchmarks, buildCoverage, buildSubjectBenchmarks, buildVcaaYearInsights, computeDistributionStats, findAttemptReferenceForYear, formatExamTitle, getAttemptPoints, getDueMistakes, isAppData, matchesAttemptReference, migrateAppData, recordMistakeReview, removeAttempt, validateAttempt, validateMistakeMarks, type AssessmentReference, type ExamAttempt, type Mistake } from "../src/lib/exam-data"
 import { parseAppDataFile } from "../src/lib/storage"
 import { buildTimetableCalendar, suggestTimetableForAttempt, type Timetable, type TimetableEntry } from "../src/lib/timetable"
 
@@ -140,23 +140,24 @@ describe("exam analysis", () => {
   test("rejects malformed imports", () => {
     expect(() => parseAppDataFile('{"schemaVersion":2}')).toThrow("valid ExamTrack")
     const data = {
-      schemaVersion: 2 as const,
+      schemaVersion: 3 as const,
       attempts: [attempt],
       mistakes: [],
       trackedExamIds: [],
+      trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
     }
     expect(isAppData(data)).toBe(true)
     expect(parseAppDataFile(JSON.stringify(data))).toEqual(data)
   })
 
-  test("migrates v1 AppData to v2 with empty trackedExamIds", () => {
+  test("migrates v1 AppData to v3 with empty trackedExamIds", () => {
     const v1 = {
       schemaVersion: 1 as const,
       attempts: [attempt],
       mistakes: [],
     }
     const migrated = migrateAppData(v1)
-    expect(migrated?.schemaVersion).toBe(2)
+    expect(migrated?.schemaVersion).toBe(3)
     expect(migrated?.trackedExamIds).toEqual([])
     expect(migrated?.attempts).toHaveLength(1)
   })
@@ -172,14 +173,14 @@ describe("exam analysis", () => {
     expect(migrated?.trackedExamIds).toEqual([])
   })
 
-  test("accepts v2 AppData with a non-empty trackedExamIds array", () => {
+  test("migrates v2 AppData with a non-empty trackedExamIds array", () => {
     const v2 = {
       schemaVersion: 2 as const,
       attempts: [attempt],
       mistakes: [],
       trackedExamIds: ["2026-11-05-mathematical-methods-exam-1"],
     }
-    expect(isAppData(v2)).toBe(true)
+    expect(migrateAppData(v2)?.trackedExamIds).toEqual(["2026-11-05-mathematical-methods-exam-1"])
   })
 
   test("accepts old mistakes without question text and validates new question text", () => {
@@ -194,11 +195,28 @@ describe("exam analysis", () => {
       createdAt: attempt.createdAt,
       updatedAt: attempt.updatedAt,
     }
-    const data = { schemaVersion: 2 as const, attempts: [attempt], mistakes: [mistake], trackedExamIds: [] }
+    const data = { schemaVersion: 3 as const, attempts: [attempt], mistakes: [mistake], trackedExamIds: [], trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z" }
 
     expect(isAppData(data)).toBe(true)
     expect(isAppData({ ...data, mistakes: [{ ...mistake, questionText: "Differentiate $e^{2x}$." }] })).toBe(true)
     expect(isAppData({ ...data, mistakes: [{ ...mistake, questionText: 42 }] })).toBe(false)
+  })
+
+  test("builds outcome coverage and schedules evidence-based mistake reviews", () => {
+    expect(buildCoverage([{ ...attempt, questionResults: [
+      { id: "q1", label: "1a", marksAwarded: 2, maxMarks: 4, confidence: "low", areaOfStudy: "Calculus" },
+      { id: "q2", label: "1b", marksAwarded: 3, maxMarks: 3, confidence: "high", areaOfStudy: "Calculus" },
+    ] }])).toEqual([expect.objectContaining({ areaOfStudy: "Calculus", earned: 5, available: 7, questions: 2 })])
+
+    const mistake: Mistake = {
+      id: "m1", attemptId: attempt.id, question: "1a", category: "Concept", explanation: "Missed rule", correction: "Apply rule",
+      resolved: false, createdAt: "2026-07-15T00:00:00.000Z", updatedAt: "2026-07-15T00:00:00.000Z",
+    }
+    const first = recordMistakeReview(mistake, "correct", "2026-07-15T00:00:00.000Z")
+    const mastered = recordMistakeReview(first, "correct", "2026-07-22T00:00:00.000Z")
+    expect(first).toMatchObject({ resolved: false, dueAt: "2026-07-22T00:00:00.000Z" })
+    expect(mastered).toMatchObject({ resolved: true, dueAt: null })
+    expect(getDueMistakes([first], new Date("2026-07-22T00:00:00.000Z"))).toHaveLength(1)
   })
 })
 

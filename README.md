@@ -12,11 +12,11 @@ bun run dev
 
 ## Supabase
 
-1. Create a Supabase project and run `supabase/migrations/20260712064624_initial.sql`.
+1. Create a Supabase project and run every SQL file in `supabase/migrations` in filename order.
 2. Copy `.env.example` to `.env.local` and add the project URL and publishable key from the Connect dialog.
 3. In Authentication → Providers → Email, disable **Confirm email** for password-only signup without callbacks.
 
-Attempts and mistakes stay available in local storage and sync after email/password sign-in. Never put a secret or service-role key in the Vite environment variables.
+Attempts, mistakes, review history, question-level results, timing evidence, and tracked official exams stay available in local storage and sync after email/password sign-in. Never put a secret or service-role key in the Vite environment variables.
 
 Student data stays in browser storage. Use the app menu to export or import a validated JSON backup.
 Mistake photos sent to ChatGPT pass through the local server and are not saved by ExamTrack.
@@ -41,6 +41,12 @@ bun run build
 
 ```bash
 bun run vcaa:import
+```
+
+`public/vcaa-exam-resources.json` contains official examination papers, specifications, samples, assessment guides, and external assessment reports. Refresh it with:
+
+```bash
+bun run vcaa:resources
 ```
 
 `public/vtac-scaling-reports.json` contains the official 2021–2025 VTAC scaling tables. Regenerate it directly from the published PDFs with:

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { analyseAttempt, findAttemptReferenceForYear, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
 import { getExamIdFromHash, getExamTarget } from "@/lib/exam-target"
+import { formatTimer } from "@/lib/exam-timer"
 
 const AttemptDistributionChart = lazy(() =>
   import("@/components/attempt-distribution-chart").then((module) => ({ default: module.AttemptDistributionChart })),
@@ -116,7 +117,11 @@ export function ExamTable({
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                    {expanded ? <TableRow className="bg-muted/30 hover:bg-muted/30"><TableCell colSpan={7} className="p-4"><Suspense fallback={<Skeleton className="h-64 w-full" />}><AttemptDistributionChart attempt={attempt} references={references} comparisonYear={comparisonYear} /></Suspense></TableCell></TableRow> : null}
+                    {expanded ? <TableRow className="bg-muted/30 hover:bg-muted/30"><TableCell colSpan={7} className="p-4"><div className="grid gap-5">
+                      {attempt.timing ? <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm"><span><strong>Writing:</strong> {formatTimer(attempt.timing.actualWritingSeconds)}</span><span><strong>Overtime:</strong> {formatTimer(attempt.timing.overtimeSeconds)}</span><span><strong>Paused:</strong> {formatTimer(attempt.timing.pausedSeconds)}</span></div> : null}
+                      {attempt.questionResults?.length ? <div className="overflow-x-auto rounded-lg border bg-background"><Table><TableHeader><TableRow><TableHead>Question</TableHead><TableHead>Outcome / criterion</TableHead><TableHead>Confidence</TableHead><TableHead className="text-right">Mark</TableHead></TableRow></TableHeader><TableBody>{attempt.questionResults.map((result) => <TableRow key={result.id}><TableCell className="font-medium">{result.label}</TableCell><TableCell><div>{result.areaOfStudy || result.criterion || "—"}</div>{result.examinerNote ? <div className="max-w-2xl text-xs text-muted-foreground">{result.examinerNote}</div> : null}</TableCell><TableCell className="capitalize">{result.confidence}</TableCell><TableCell className="text-right tabular-nums">{result.marksAwarded}/{result.maxMarks}</TableCell></TableRow>)}</TableBody></Table></div> : null}
+                      <Suspense fallback={<Skeleton className="h-64 w-full" />}><AttemptDistributionChart attempt={attempt} references={references} comparisonYear={comparisonYear} /></Suspense>
+                    </div></TableCell></TableRow> : null}
                   </Fragment>
                 )
               })}

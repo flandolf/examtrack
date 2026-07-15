@@ -11,6 +11,7 @@ import {
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { QuestionResultsEditor } from "@/components/question-results-editor"
 import {
   Sheet,
   SheetContent,
@@ -19,7 +20,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { analyseAttempt, findAttemptReferenceForYear, formatExamTitle, formatReferenceName, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
+import { analyseAttempt, findAttemptReferenceForYear, formatExamTitle, formatReferenceName, validateAttempt, validateQuestionResults, type AssessmentReference, type ExamAttempt, type QuestionResult } from "@/lib/exam-data"
 
 type ExamSheetProps = {
   open: boolean
@@ -41,6 +42,7 @@ export function ExamSheet({ open, references, comparisonYear, initialAttempt, on
   const [rawScore, setRawScore] = useState(initialAttempt?.rawScore ?? 0)
   const [rawMax, setRawMax] = useState(initialAttempt?.rawMax ?? 40)
   const [comment, setComment] = useState(initialAttempt?.comment ?? "")
+  const [questionResults, setQuestionResults] = useState<QuestionResult[]>(initialAttempt?.questionResults ?? [])
   const [error, setError] = useState<string | null>(null)
 
   const subjects = useMemo(
@@ -64,6 +66,7 @@ export function ExamSheet({ open, references, comparisonYear, initialAttempt, on
     setRawScore(0)
     setRawMax(40)
     setComment("")
+    setQuestionResults([])
     setError(null)
   }
 
@@ -78,6 +81,8 @@ export function ExamSheet({ open, references, comparisonYear, initialAttempt, on
       setError(scoreError)
       return
     }
+    const questionError = validateQuestionResults(questionResults)
+    if (questionError) return setError(questionError)
 
     const timestamp = new Date().toISOString()
     onSave({
@@ -91,6 +96,8 @@ export function ExamSheet({ open, references, comparisonYear, initialAttempt, on
       rawScore,
       rawMax,
       comment: comment.trim() || undefined,
+      questionResults: questionResults.length ? questionResults : undefined,
+      timing: initialAttempt?.timing,
       referenceId: null,
       createdAt: initialAttempt?.createdAt ?? timestamp,
       updatedAt: timestamp,
@@ -172,6 +179,7 @@ export function ExamSheet({ open, references, comparisonYear, initialAttempt, on
               <FieldLabel htmlFor="exam-comment">Overall comment <span className="text-muted-foreground">(optional)</span></FieldLabel>
               <Textarea id="exam-comment" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="What went well or what to improve next time?" />
             </Field>
+            <QuestionResultsEditor value={questionResults} onChange={setQuestionResults} />
             <FieldError>{error}</FieldError>
           </FieldGroup>
         </form>

@@ -24,8 +24,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress, ProgressLabel } from "@/components/ui/progress"
 import { PageHeader } from "@/components/page-header"
+import { QuestionResultsEditor } from "@/components/question-results-editor"
 import { useTickingNow } from "@/hooks/use-ticking-now"
-import { formatExamTitle, formatReferenceName, validateAttempt, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
+import { formatExamTitle, formatReferenceName, validateAttempt, validateQuestionResults, type AssessmentReference, type ExamAttempt, type QuestionResult } from "@/lib/exam-data"
 import { formatTimer, getExamTimerState } from "@/lib/exam-timer"
 
 type TimerSession = {
@@ -39,10 +40,14 @@ type TimerSession = {
   marks: number
   startedAt: number
   pausedAt?: number
+  pausedSeconds: number
 }
+
+export type ExamTimerPreset = Pick<TimerSession, "subject" | "provider" | "examYear" | "paper" | "marks"> & Partial<Pick<TimerSession, "readingMinutes" | "writingMinutes">>
 
 type ExamTimerProps = {
   references: AssessmentReference[]
+  initialExam?: ExamTimerPreset | null
   onSave: (attempt: ExamAttempt) => void
 }
 
@@ -56,7 +61,8 @@ function loadSession(): TimerSession | null {
       typeof value.title === "string" && typeof value.examYear === "number" && typeof value.paper === "string" &&
       typeof value.startedAt === "number" && typeof value.readingMinutes === "number" &&
       typeof value.writingMinutes === "number" && typeof value.marks === "number" &&
-      (value.pausedAt === undefined || typeof value.pausedAt === "number")
+      (value.pausedAt === undefined || typeof value.pausedAt === "number") &&
+      (value.pausedSeconds === undefined || typeof value.pausedSeconds === "number")
       ? value as TimerSession
       : null
   } catch {
@@ -64,21 +70,22 @@ function loadSession(): TimerSession | null {
   }
 }
 
-export function ExamTimer({ references, onSave }: ExamTimerProps) {
+export function ExamTimer({ references, initialExam, onSave }: ExamTimerProps) {
   const [session, setSession] = useState<TimerSession | null>(loadSession)
-  const [subject, setSubject] = useState("")
-  const [provider, setProvider] = useState("VCAA")
-  const [examYear, setExamYear] = useState(new Date().getFullYear())
-  const [paper, setPaper] = useState("")
-  const [readingMinutes, setReadingMinutes] = useState(15)
-  const [writingMinutes, setWritingMinutes] = useState(60)
-  const [marks, setMarks] = useState(40)
+  const [subject, setSubject] = useState(initialExam?.subject ?? "")
+  const [provider, setProvider] = useState(initialExam?.provider ?? "VCAA")
+  const [examYear, setExamYear] = useState(initialExam?.examYear ?? new Date().getFullYear())
+  const [paper, setPaper] = useState(initialExam?.paper ?? "")
+  const [readingMinutes, setReadingMinutes] = useState(initialExam?.readingMinutes ?? 15)
+  const [writingMinutes, setWritingMinutes] = useState(initialExam?.writingMinutes ?? 60)
+  const [marks, setMarks] = useState(initialExam?.marks ?? 40)
   const [markingOpen, setMarkingOpen] = useState(false)
   const [rawScore, setRawScore] = useState(0)
   const [rawMax, setRawMax] = useState(40)
   const [comment, setComment] = useState("")
   const [completedAt, setCompletedAt] = useState(today)
   const [markingError, setMarkingError] = useState<string | null>(null)
+  const [questionResults, setQuestionResults] = useState<QuestionResult[]>([])
   const now = useTickingNow(250)
 
   const subjects = useMemo(() => [...new Set(references.map((item) => item.studyName))].toSorted(), [references])
@@ -96,7 +103,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
     event.preventDefault()
     const next = {
       subject: subject.trim(), provider: provider.trim(), title: formatExamTitle(provider, examYear, subject), examYear, paper: paper.trim(),
-      readingMinutes, writingMinutes, marks, startedAt: Date.now(),
+      readingMinutes, writingMinutes, marks, startedAt: Date.now(), pausedSeconds: 0,
     }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setSession(next)
@@ -111,7 +118,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
   }
 
   function skipReading() {
-    if (!session) return
+    if (!session || !timer) return
     const next = { ...session, startedAt: Date.now() - session.readingMinutes * 60_000 }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setSession(next)
@@ -126,7 +133,8 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
 
   function resume() {
     if (!session?.pausedAt) return
-    const next = { ...session, startedAt: session.startedAt + Date.now() - session.pausedAt, pausedAt: undefined }
+    const pauseDuration = Date.now() - session.pausedAt
+    const next = { ...session, startedAt: session.startedAt + pauseDuration, pausedAt: undefined, pausedSeconds: (session.pausedSeconds ?? 0) + Math.floor(pauseDuration / 1000) }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setSession(next)
   }
@@ -146,12 +154,14 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
 
   function saveMark(event: FormEvent) {
     event.preventDefault()
-    if (!session) return
+    if (!session || !timer) return
     const error = validateAttempt({ rawScore, rawMax })
     if (error) {
       setMarkingError(error)
       return
     }
+    const questionError = validateQuestionResults(questionResults)
+    if (questionError) return setMarkingError(questionError)
     const timestamp = new Date().toISOString()
     onSave({
       id: crypto.randomUUID(),
@@ -164,6 +174,14 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
       rawScore,
       rawMax,
       comment: comment.trim() || undefined,
+      questionResults: questionResults.length ? questionResults : undefined,
+      timing: {
+        plannedReadingMinutes: session.readingMinutes,
+        plannedWritingMinutes: session.writingMinutes,
+        actualWritingSeconds: timer.writingElapsedSeconds,
+        overtimeSeconds: timer.overtimeSeconds,
+        pausedSeconds: session.pausedSeconds ?? 0,
+      },
       referenceId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -277,7 +295,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
       {overtime ? <Alert variant="destructive"><Clock3 /><AlertTitle>Writing time has ended</AlertTitle><AlertDescription>The timer is now recording overtime. Finish and mark when you put your pen down.</AlertDescription></Alert> : null}
 
       <Dialog open={markingOpen} onOpenChange={(open) => open ? setMarkingOpen(true) : closeMarking()}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Mark and log exam</DialogTitle>
             <DialogDescription>Enter your result to add this timed attempt to ExamTrack.</DialogDescription>
@@ -298,6 +316,7 @@ export function ExamTimer({ references, onSave }: ExamTimerProps) {
                 <FieldLabel htmlFor="timer-completed">Completed</FieldLabel>
                 <Input id="timer-completed" type="date" value={completedAt} onChange={(event) => setCompletedAt(event.target.value)} required />
               </Field>
+              <QuestionResultsEditor value={questionResults} onChange={setQuestionResults} />
               <Field>
                 <FieldLabel htmlFor="timer-comment">Overall comment <span className="text-muted-foreground">(optional)</span></FieldLabel>
                 <Textarea id="timer-comment" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="What went well or what to improve next time?" />

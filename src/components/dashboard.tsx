@@ -18,7 +18,9 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   analyseAttempt,
+  buildCoverage,
   findAttemptReferenceForYear,
+  getDueMistakes,
   matchesAttemptReference,
   type AppData,
   type AssessmentReference,
@@ -65,6 +67,7 @@ function pickNextAction(
     onLogExam: () => void
     onLogMistakeForLatest: () => void
     onOpenMistakes: () => void
+    onOpenLibrary: () => void
   },
 ): NextAction | null {
   if (data.attempts.length === 0) {
@@ -79,9 +82,10 @@ function pickNextAction(
   }
 
   const unresolved = data.mistakes.filter((mistake) => !mistake.resolved)
-  if (unresolved.length > 0) {
+  const due = getDueMistakes(unresolved)
+  if (due.length > 0) {
     const counts = new Map<string, number>()
-    for (const mistake of unresolved) counts.set(mistake.category, (counts.get(mistake.category) ?? 0) + 1)
+    for (const mistake of due) counts.set(mistake.category, (counts.get(mistake.category) ?? 0) + 1)
     let topCategory: string | null = null
     let topCount = 0
     for (const [category, count] of counts) {
@@ -123,8 +127,27 @@ function pickNextAction(
       onClick: handlers.onLogMistakeForLatest,
     }
   }
+  const weakestArea = buildCoverage(data.attempts)[0]
+  return {
+    icon: BookOpenCheck,
+    title: "Sit another official-style paper",
+    description: weakestArea ? `Choose a paper that tests ${weakestArea.areaOfStudy}, currently your weakest marked area at ${weakestArea.percentage.toFixed(0)}%.` : unresolved.length ? `${unresolved.length} mistake${unresolved.length === 1 ? " is" : "s are"} scheduled for later. Build fresh evidence while you wait.` : "Use the exam library to choose your next paper and preserve timed conditions.",
+    cta: "Open exam library",
+    onClick: handlers.onOpenLibrary,
+  }
+}
 
-  return null
+function CoverageSummary({ data }: { data: AppData }) {
+  const coverage = useMemo(() => buildCoverage(data.attempts), [data.attempts])
+  if (!coverage.length) return null
+  return (
+    <section aria-labelledby="coverage-title" className="grid gap-3 rounded-lg border p-5">
+      <div><h2 id="coverage-title" className="font-semibold">Outcome coverage</h2><p className="text-sm text-muted-foreground">Weakest question-level areas first. Add Area of Study labels while marking to improve this view.</p></div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {coverage.slice(0, 6).map((area) => <div key={`${area.subject}-${area.areaOfStudy}`} className="grid gap-1 rounded-md bg-muted/50 p-3"><div className="flex justify-between gap-3 text-sm"><span className="min-w-0 truncate font-medium">{area.areaOfStudy}</span><span className="tabular-nums">{area.percentage.toFixed(0)}%</span></div><p className="truncate text-xs text-muted-foreground">{area.subject} · {area.questions} question{area.questions === 1 ? "" : "s"}</p><Progress value={area.percentage} /></div>)}
+      </div>
+    </section>
+  )
 }
 
 function computeStats(attempts: ExamAttempt[]) {
@@ -426,6 +449,7 @@ export type DashboardProps = {
   onLogExam: () => void
   onLogMistakeForLatest: () => void
   onOpenMistakes: () => void
+  onOpenLibrary: () => void
   onOpenTracker: () => void
   onEditExam: (attempt: ExamAttempt) => void
   onAddMistake: (attemptId: string) => void
@@ -442,14 +466,15 @@ export function Dashboard(props: DashboardProps) {
     onLogExam,
     onLogMistakeForLatest,
     onOpenMistakes,
+    onOpenLibrary,
     onOpenTracker,
     onEditExam,
     onAddMistake,
     onDeleteExam,
   } = props
   const nextAction = useMemo(
-    () => pickNextAction(data, { onLogExam, onLogMistakeForLatest, onOpenMistakes }),
-    [data, onLogExam, onLogMistakeForLatest, onOpenMistakes],
+    () => pickNextAction(data, { onLogExam, onLogMistakeForLatest, onOpenMistakes, onOpenLibrary }),
+    [data, onLogExam, onLogMistakeForLatest, onOpenMistakes, onOpenLibrary],
   )
 
   const deadlineSection = timetable ? (
@@ -513,6 +538,8 @@ export function Dashboard(props: DashboardProps) {
       {/* Deadlines and the next study action are both study signals -- stack them above stats. */}
       {deadlineSection}
       <NextActionNotice action={nextAction} />
+
+      <CoverageSummary data={data} />
 
       <StatRow data={data} />
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { mergeCollection } from "../src/lib/sync"
+import { mergeCollection, mergeTrackedState } from "../src/lib/sync"
 
 type Item = { id: string; updatedAt: string; value: string }
 
@@ -44,5 +44,10 @@ describe("sync merge", () => {
 
     expect(mergeCollection([], [{ id: payload.id, payload, updated_at: payload.updatedAt, deleted_at: null }], {}))
       .toEqual([payload])
+  })
+
+  test("keeps the newest tracked-exam state across devices", () => {
+    expect(mergeTrackedState(["local"], "2026-07-15T01:00:00.000Z", ["remote"], "2026-07-15T02:00:00.000Z"))
+      .toEqual({ trackedExamIds: ["remote"], trackedExamIdsUpdatedAt: "2026-07-15T02:00:00.000Z" })
   })
 })

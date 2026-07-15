@@ -62,6 +62,8 @@ export function MistakeSheet({
   const [category, setCategory] = useState<MistakeCategory>(initialMistake?.category ?? "Concept")
   const [explanation, setExplanation] = useState(initialMistake?.explanation ?? "")
   const [correction, setCorrection] = useState(initialMistake?.correction ?? "")
+  const [areaOfStudy, setAreaOfStudy] = useState(initialMistake?.areaOfStudy ?? "")
+  const [criterion, setCriterion] = useState(initialMistake?.criterion ?? "")
   const [totalMarks, setTotalMarks] = useState(initialMistake?.totalMarks ?? 0)
   const [marksLost, setMarksLost] = useState(initialMistake?.marksLost ?? 0)
   const [image, setImage] = useState<File | null>(null)
@@ -82,6 +84,8 @@ export function MistakeSheet({
     setCategory("Concept")
     setExplanation("")
     setCorrection("")
+    setAreaOfStudy("")
+    setCriterion("")
     setTotalMarks(0)
     setMarksLost(0)
     setImage(null)
@@ -127,8 +131,12 @@ export function MistakeSheet({
       category,
       explanation: explanation.trim(),
       correction: correction.trim(),
+      areaOfStudy: areaOfStudy.trim() || undefined,
+      criterion: criterion.trim() || undefined,
       totalMarks,
       marksLost,
+      dueAt: initialMistake?.dueAt ?? timestamp,
+      reviewHistory: initialMistake?.reviewHistory,
       resolved: initialMistake?.resolved ?? false,
       createdAt: initialMistake?.createdAt ?? timestamp,
       updatedAt: timestamp,
@@ -246,6 +254,17 @@ export function MistakeSheet({
                 </SelectContent>
               </Select>
             </Field>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="mistake-area">Area of Study / key knowledge <span className="text-muted-foreground">(optional)</span></FieldLabel>
+                <Input id="mistake-area" value={areaOfStudy} onChange={(event) => setAreaOfStudy(event.target.value)} placeholder="Differentiation" />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="mistake-criterion">Assessment criterion <span className="text-muted-foreground">(optional)</span></FieldLabel>
+                <Input id="mistake-criterion" value={criterion} onChange={(event) => setCriterion(event.target.value)} placeholder="Use evidence precisely" />
+              </Field>
+            </div>
 
             <Field>
               <FieldLabel htmlFor="explanation">What went wrong?</FieldLabel>

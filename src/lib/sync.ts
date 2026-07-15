@@ -65,6 +65,17 @@ export function mergeCollection<T extends { id: string; updatedAt: string }>(
   return [...merged.values()]
 }
 
+export function mergeTrackedState(
+  localIds: string[],
+  localUpdatedAt: string,
+  remoteIds: string[],
+  remoteUpdatedAt: string,
+) {
+  return remoteUpdatedAt > localUpdatedAt
+    ? { trackedExamIds: remoteIds, trackedExamIdsUpdatedAt: remoteUpdatedAt }
+    : { trackedExamIds: localIds, trackedExamIdsUpdatedAt: localUpdatedAt }
+}
+
 async function syncCollection<T extends { id: string; updatedAt: string }>(
   collection: Collection,
   userId: string,
@@ -99,20 +110,23 @@ async function syncCollection<T extends { id: string; updatedAt: string }>(
 
 export async function syncAppData(data: AppData, userId: string): Promise<AppData> {
   if (!supabase) return data
-  const [attemptResult, mistakeResult] = await Promise.all([
+  const [attemptResult, mistakeResult, stateResult] = await Promise.all([
     supabase.from("attempts").select("id,payload,updated_at,deleted_at"),
     supabase.from("mistakes").select("id,payload,updated_at,deleted_at"),
+    supabase.from("user_state").select("payload,updated_at").maybeSingle(),
   ])
   if (attemptResult.error) throw attemptResult.error
   if (mistakeResult.error) throw mistakeResult.error
+  if (stateResult.error) throw stateResult.error
 
   const activeAttempts = attemptResult.data.filter((row) => !row.deleted_at).map((row) => row.payload)
   const activeMistakes = mistakeResult.data.filter((row) => !row.deleted_at).map((row) => row.payload)
   const validated = migrateAppData({
-    schemaVersion: 2,
+    schemaVersion: 3,
     attempts: activeAttempts,
     mistakes: activeMistakes,
     trackedExamIds: [],
+    trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
   })
   if (!validated) throw new Error("Synced data is invalid.")
 
@@ -125,8 +139,18 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
     syncCollection<ExamAttempt>("attempts", userId, data.attempts, attemptRows, tombstones.attempts),
     syncCollection<Mistake>("mistakes", userId, data.mistakes, mistakeRows, tombstones.mistakes),
   ])
+  const remoteState = stateResult.data?.payload as { trackedExamIds?: unknown } | undefined
+  const remoteIds = Array.isArray(remoteState?.trackedExamIds) && remoteState.trackedExamIds.every((id) => typeof id === "string") ? remoteState.trackedExamIds : []
+  const remoteUpdatedAt = stateResult.data?.updated_at ?? ""
+  const { trackedExamIds, trackedExamIdsUpdatedAt } = mergeTrackedState(data.trackedExamIds, data.trackedExamIdsUpdatedAt, remoteIds, remoteUpdatedAt)
+  const { error: stateError } = await supabase.from("user_state").upsert({
+    user_id: userId,
+    payload: { trackedExamIds },
+    updated_at: trackedExamIdsUpdatedAt,
+  }, { onConflict: "user_id" })
+  if (stateError) throw stateError
   saveTombstones(tombstones)
-  return { ...data, attempts: attempts ?? data.attempts, mistakes: mistakes ?? data.mistakes }
+  return { ...data, attempts: attempts ?? data.attempts, mistakes: mistakes ?? data.mistakes, trackedExamIds, trackedExamIdsUpdatedAt }
 }
 
 export type SyncStatus = "unconfigured" | "signed-out" | "syncing" | "synced" | "error"

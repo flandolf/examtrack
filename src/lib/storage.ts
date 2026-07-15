@@ -21,7 +21,7 @@ export function parseAppDataFile(text: string): AppData {
   const parsed: unknown = JSON.parse(text)
   const migrated = migrateAppData(parsed)
   if (!migrated) {
-    throw new Error("This file is not a valid ExamTrack v1 or v2 export.")
+    throw new Error("This file is not a valid ExamTrack export.")
   }
   return migrated
 }

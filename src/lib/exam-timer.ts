@@ -29,6 +29,7 @@ export function getExamTimerState(
       ? readingSeconds ? (phaseElapsedSeconds / readingSeconds) * 100 : 100
       : writingSeconds ? (phaseElapsedSeconds / writingSeconds) * 100 : 100,
     expectedMarks: writingSeconds ? Math.min(marks, (writingElapsedSeconds / writingSeconds) * marks) : marks,
+    writingElapsedSeconds,
   }
 }
 

@@ -43,9 +43,40 @@ export type ExamAttempt = {
   rawScore: number
   rawMax: number
   comment?: string
+  questionResults?: QuestionResult[]
+  timing?: ExamTiming
   referenceId: string | null
   createdAt: string
   updatedAt: string
+}
+
+export type QuestionConfidence = "low" | "medium" | "high"
+
+export type QuestionResult = {
+  id: string
+  label: string
+  marksAwarded: number
+  maxMarks: number
+  areaOfStudy?: string
+  criterion?: string
+  confidence: QuestionConfidence
+  examinerNote?: string
+}
+
+export type ExamTiming = {
+  plannedReadingMinutes: number
+  plannedWritingMinutes: number
+  actualWritingSeconds: number
+  overtimeSeconds: number
+  pausedSeconds: number
+}
+
+export type ReviewResult = "incorrect" | "assisted" | "correct"
+
+export type MistakeReview = {
+  id: string
+  completedAt: string
+  result: ReviewResult
 }
 
 export type Mistake = {
@@ -58,23 +89,80 @@ export type Mistake = {
   correction: string
   totalMarks?: number
   marksLost?: number
+  areaOfStudy?: string
+  criterion?: string
+  dueAt?: string | null
+  reviewHistory?: MistakeReview[]
   resolved: boolean
   createdAt: string
   updatedAt: string
 }
 
 export type AppData = {
-  schemaVersion: 2
+  schemaVersion: 3
   attempts: ExamAttempt[]
   mistakes: Mistake[]
   trackedExamIds: string[]
+  trackedExamIdsUpdatedAt: string
 }
 
 export const EMPTY_APP_DATA: AppData = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   attempts: [],
   mistakes: [],
   trackedExamIds: [],
+  trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+export function recordMistakeReview(
+  mistake: Mistake,
+  result: ReviewResult,
+  completedAt = new Date().toISOString(),
+): Mistake {
+  const history = [...(mistake.reviewHistory ?? []), { id: crypto.randomUUID(), completedAt, result }]
+  const correctStreak = history.toReversed().findIndex((review) => review.result !== "correct")
+  const consecutiveCorrect = correctStreak === -1 ? history.length : correctStreak
+  const resolved = consecutiveCorrect >= 2
+  const delayDays = result === "incorrect" ? 1 : result === "assisted" ? 3 : resolved ? 30 : 7
+  const dueAt = resolved ? null : new Date(new Date(completedAt).getTime() + delayDays * DAY_MS).toISOString()
+  return { ...mistake, reviewHistory: history, resolved, dueAt, updatedAt: completedAt }
+}
+
+export function getDueMistakes(mistakes: Mistake[], now = new Date()): Mistake[] {
+  const timestamp = now.getTime()
+  return mistakes.filter((mistake) => !mistake.resolved && (!mistake.dueAt || new Date(mistake.dueAt).getTime() <= timestamp))
+    .toSorted((first, second) => (first.dueAt ?? first.createdAt).localeCompare(second.dueAt ?? second.createdAt))
+}
+
+export type CoverageArea = {
+  subject: string
+  areaOfStudy: string
+  earned: number
+  available: number
+  percentage: number
+  questions: number
+}
+
+export function buildCoverage(attempts: ExamAttempt[]): CoverageArea[] {
+  const areas = new Map<string, Omit<CoverageArea, "percentage">>()
+  for (const attempt of attempts) {
+    for (const result of attempt.questionResults ?? []) {
+      const areaOfStudy = result.areaOfStudy?.trim()
+      if (!areaOfStudy) continue
+      const key = `${attempt.subject}\u0000${areaOfStudy}`
+      const area = areas.get(key) ?? { subject: attempt.subject, areaOfStudy, earned: 0, available: 0, questions: 0 }
+      area.earned += result.marksAwarded
+      area.available += result.maxMarks
+      area.questions += 1
+      areas.set(key, area)
+    }
+  }
+  return [...areas.values()].map((area) => ({
+    ...area,
+    percentage: area.available ? (area.earned / area.available) * 100 : 0,
+  })).toSorted((first, second) => first.percentage - second.percentage || first.areaOfStudy.localeCompare(second.areaOfStudy))
 }
 
 export function formatExamTitle(provider: string, examYear: number, subject: string): string {
@@ -159,6 +247,15 @@ export function validateMistakeMarks(totalMarks: number, marksLost: number): str
   if (!Number.isFinite(totalMarks) || totalMarks <= 0) return "Total marks must be greater than zero."
   if (!Number.isFinite(marksLost) || marksLost < 0) return "Marks lost must be zero or greater."
   return marksLost > totalMarks ? "Marks lost cannot exceed total marks." : null
+}
+
+export function validateQuestionResults(results: QuestionResult[]): string | null {
+  for (const result of results) {
+    if (!result.label.trim()) return "Every question needs a label."
+    const error = validateAttempt({ rawScore: result.marksAwarded, rawMax: result.maxMarks })
+    if (error) return `${result.label}: ${error}`
+  }
+  return null
 }
 
 export function normaliseComparisonName(value: string) {
@@ -444,6 +541,8 @@ export function isAppData(value: unknown): value is AppData {
           typeof attempt.rawScore === "number" &&
           typeof attempt.rawMax === "number" &&
           (attempt.comment === undefined || typeof attempt.comment === "string") &&
+          (attempt.questionResults === undefined || Array.isArray(attempt.questionResults) && attempt.questionResults.every(isQuestionResult)) &&
+          (attempt.timing === undefined || isExamTiming(attempt.timing)) &&
           (attempt.referenceId === null || typeof attempt.referenceId === "string") &&
           typeof attempt.createdAt === "string" &&
           typeof attempt.updatedAt === "string" &&
@@ -469,6 +568,10 @@ export function isAppData(value: unknown): value is AppData {
         (mistake.totalMarks === undefined || typeof mistake.totalMarks === "number") &&
         (mistake.marksLost === undefined || typeof mistake.marksLost === "number") &&
         (mistake.totalMarks === undefined && mistake.marksLost === undefined || validateMistakeMarks(mistake.totalMarks!, mistake.marksLost!) === null) &&
+        (mistake.areaOfStudy === undefined || typeof mistake.areaOfStudy === "string") &&
+        (mistake.criterion === undefined || typeof mistake.criterion === "string") &&
+        (mistake.dueAt === undefined || mistake.dueAt === null || typeof mistake.dueAt === "string") &&
+        (mistake.reviewHistory === undefined || Array.isArray(mistake.reviewHistory) && mistake.reviewHistory.every(isMistakeReview)) &&
         typeof mistake.resolved === "boolean" &&
         typeof mistake.createdAt === "string" &&
         typeof mistake.updatedAt === "string"
@@ -478,29 +581,55 @@ export function isAppData(value: unknown): value is AppData {
     Array.isArray(data.trackedExamIds) &&
     data.trackedExamIds.every((value) => typeof value === "string")
   return (
-    data.schemaVersion === 2 &&
+    data.schemaVersion === 3 &&
     attemptsValid &&
     mistakesValid &&
-    trackedExamIdsValid
+    trackedExamIdsValid &&
+    typeof data.trackedExamIdsUpdatedAt === "string"
   )
+}
+
+function isQuestionResult(value: unknown): value is QuestionResult {
+  if (!isRecord(value)) return false
+  return typeof value.id === "string" && typeof value.label === "string" &&
+    typeof value.marksAwarded === "number" && typeof value.maxMarks === "number" &&
+    ["low", "medium", "high"].includes(String(value.confidence)) &&
+    (value.areaOfStudy === undefined || typeof value.areaOfStudy === "string") &&
+    (value.criterion === undefined || typeof value.criterion === "string") &&
+    (value.examinerNote === undefined || typeof value.examinerNote === "string") &&
+    validateAttempt({ rawScore: value.marksAwarded, rawMax: value.maxMarks }) === null
+}
+
+function isExamTiming(value: unknown): value is ExamTiming {
+  if (!isRecord(value)) return false
+  return ["plannedReadingMinutes", "plannedWritingMinutes", "actualWritingSeconds", "overtimeSeconds", "pausedSeconds"]
+    .every((key) => typeof value[key] === "number" && Number.isFinite(value[key]) && Number(value[key]) >= 0)
+}
+
+function isMistakeReview(value: unknown): value is MistakeReview {
+  if (!isRecord(value)) return false
+  return typeof value.id === "string" && typeof value.completedAt === "string" &&
+    ["incorrect", "assisted", "correct"].includes(String(value.result))
 }
 
 export function migrateAppData(value: unknown): AppData | null {
   if (!isRecord(value)) return null
   const data = value as Record<string, unknown>
   const schemaVersion = data.schemaVersion
-  if (schemaVersion === 1) {
+  if (schemaVersion === 1 || schemaVersion === 2) {
+    if (!Array.isArray(data.attempts) || !Array.isArray(data.mistakes)) return null
     const migrated = {
-      schemaVersion: 2 as const,
+      schemaVersion: 3 as const,
       attempts: Array.isArray(data.attempts) ? data.attempts : [],
       mistakes: Array.isArray(data.mistakes) ? data.mistakes : [],
-      trackedExamIds: [],
+      trackedExamIds: Array.isArray(data.trackedExamIds) ? data.trackedExamIds : [],
+      trackedExamIdsUpdatedAt: typeof data.trackedExamIdsUpdatedAt === "string" ? data.trackedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
     }
     return isAppData(migrated) ? migrated : null
   }
-  if (schemaVersion === 2) {
-    if (!Array.isArray(data.trackedExamIds)) {
-      const migrated = { ...(data as Partial<AppData>), trackedExamIds: [] }
+  if (schemaVersion === 3) {
+    if (!Array.isArray(data.trackedExamIds) || typeof data.trackedExamIdsUpdatedAt !== "string") {
+      const migrated = { ...(data as Partial<AppData>), trackedExamIds: Array.isArray(data.trackedExamIds) ? data.trackedExamIds : [], trackedExamIdsUpdatedAt: typeof data.trackedExamIdsUpdatedAt === "string" ? data.trackedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z" }
       return isAppData(migrated) ? migrated : null
     }
     return isAppData(data) ? data : null

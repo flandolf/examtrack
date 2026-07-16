@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
-import { interpolateScaledScore, predictScaledStudyScore, type ScalingReference } from "../src/lib/scaling"
-import { parseScalingReportText } from "../vtac/import-scaling-reports.mjs"
+import {
+  interpolateScaledScore,
+  normaliseScalingStudyName,
+  predictScaledStudyScore,
+  type ScalingReference,
+} from "../src/lib/scaling"
+import { parseScalingReportText, REPORTS } from "../vtac/import-scaling-reports.mjs"
 
 const points = [20, 25, 30, 35, 40, 45, 50].map((rawScore, index) => ({
   rawScore,
@@ -23,6 +28,36 @@ describe("VTAC scaling", () => {
     })])
   })
 
+  test("parses archive rows without study codes", () => {
+    const references = parseScalingReportText({
+      year: 2012,
+      url: "https://example.test/archive-scaling.pdf",
+      text: "Mathematical Methods (CAS) 35.1 7.1 24 30 36 41 45 48 50",
+    })
+    expect(references).toEqual([expect.objectContaining({
+      code: "LEGACY_MATHEMATICAL_METHODS_CAS",
+      studyName: "Mathematical Methods (CAS)",
+      year: 2012,
+      points: [20, 25, 30, 35, 40, 45, 50].map((rawScore, index) => ({
+        rawScore,
+        scaledScore: [24, 30, 36, 41, 45, 48, 50][index],
+      })),
+    })])
+  })
+
+  test("catalogues current and archive scaling reports from 2012 to 2025", () => {
+    expect(REPORTS.map((report) => report.year).toSorted()).toEqual(
+      Array.from({ length: 14 }, (_, index) => 2012 + index),
+    )
+  })
+
+  test("normalises legacy study names for historical comparisons", () => {
+    expect(normaliseScalingStudyName("Mathematical Methods (CAS)")).toBe("mathematical methods")
+    expect(normaliseScalingStudyName("Further Mathematics")).toBe("general mathematics")
+    expect(normaliseScalingStudyName("Chinese (SL Advanced)")).toBe("chinese second language advanced")
+    expect(normaliseScalingStudyName("English (ESL)")).toBe("english as an additional language")
+  })
+
   test("interpolates between the raw scores published by VTAC", () => {
     expect(interpolateScaledScore(40, points)).toBe(46)
     expect(interpolateScaledScore(42.5, points)).toBe(47.5)
@@ -32,18 +67,18 @@ describe("VTAC scaling", () => {
   test("averages matching estimates across available report years", () => {
     const references: ScalingReference[] = [
       { id: "NJ:2024", code: "NJ", studyName: "Mathematical Methods", year: 2024, mean: 34, standardDeviation: 8, sourceUrl: "2024.pdf", points },
-      { id: "NJ:2025", code: "NJ", studyName: "Mathematical Methods", year: 2025, mean: 34, standardDeviation: 8, sourceUrl: "2025.pdf", points: points.map((point) => ({ ...point, scaledScore: point.scaledScore + 1 })) },
+      { id: "LEGACY_MATHEMATICAL_METHODS_CAS:2012", code: "LEGACY_MATHEMATICAL_METHODS_CAS", studyName: "Mathematical Methods (CAS)", year: 2012, mean: 34, standardDeviation: 8, sourceUrl: "2012.pdf", points: points.map((point) => ({ ...point, scaledScore: point.scaledScore + 1 })) },
     ]
     expect(predictScaledStudyScore(40, "Mathematical Methods", references)).toMatchObject({
       scaledScore: 46.5,
       minimum: 46,
       maximum: 47,
     })
-    expect(predictScaledStudyScore(40, "Mathematical Methods", references, 2025)).toMatchObject({
-      scaledScore: 47,
-      minimum: 47,
-      maximum: 47,
-      yearEstimates: [expect.objectContaining({ year: 2025 })],
+    expect(predictScaledStudyScore(40, "Mathematical Methods", references, 2024)).toMatchObject({
+      scaledScore: 46,
+      minimum: 46,
+      maximum: 46,
+      yearEstimates: [expect.objectContaining({ year: 2024 })],
     })
   })
 

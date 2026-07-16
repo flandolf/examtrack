@@ -2,6 +2,7 @@ import { createChatGPTProxyProvider } from "@opencoredev/loginwithchatgpt-ai"
 import { jsonSchema, Output, streamText } from "ai"
 import { MISTAKE_CATEGORIES, type ExamAttempt, type Mistake, type MistakeCategory, type MistakeInsights } from "@/lib/exam-data"
 import { loadAISettings } from "@/lib/ai-settings"
+import { findVcaaExamForAttempt, type VcaaStudyResources } from "@/lib/vcaa-resources"
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024
 
@@ -14,9 +15,68 @@ export type MistakeDraft = {
   correction: string
 }
 
+export type ChatGPTProgress = {
+  phase: "connecting" | "thinking" | "writing" | "complete"
+  tokens: number
+  estimated: boolean
+  reasoning: boolean
+}
+
+type ProgressChunk = {
+  type: string
+  text?: string
+  totalUsage?: {
+    outputTokens?: number
+    outputTokenDetails?: { reasoningTokens?: number }
+  }
+}
+
+export function createChatGPTProgressHandler(onProgress?: (progress: ChatGPTProgress) => void) {
+  let characters = 0
+  let reasoning = false
+  let phase: ChatGPTProgress["phase"] = "connecting"
+  let last = ""
+  return ({ chunk }: { chunk: ProgressChunk }) => {
+    if (chunk.type === "reasoning-start" || chunk.type === "reasoning-delta") {
+      phase = "thinking"
+      reasoning = true
+    } else if (chunk.type === "text-start" || chunk.type === "text-delta") {
+      phase = "writing"
+    }
+    if ((chunk.type === "reasoning-delta" || chunk.type === "text-delta") && chunk.text) characters += chunk.text.length
+    const finished = chunk.type === "finish"
+    if (finished) {
+      phase = "complete"
+      reasoning ||= (chunk.totalUsage?.outputTokenDetails?.reasoningTokens ?? 0) > 0
+    }
+    const tokens = finished && chunk.totalUsage?.outputTokens !== undefined
+      ? chunk.totalUsage.outputTokens
+      : Math.ceil(characters / 4)
+    const progress = { phase, tokens, estimated: !finished, reasoning }
+    const key = JSON.stringify(progress)
+    if (key !== last) onProgress?.(progress)
+    last = key
+  }
+}
+
+export function formatChatGPTProgress({ phase, tokens, estimated, reasoning }: ChatGPTProgress) {
+  const status = phase === "connecting" ? "Connecting to ChatGPT" : phase === "thinking" ? "ChatGPT is thinking" : phase === "writing" ? "ChatGPT is writing" : "ChatGPT finished"
+  return `${status} · ${estimated && tokens ? "~" : ""}${tokens} streamed tokens${reasoning ? " · reasoning detected" : ""}`
+}
+
 export function validateMistakeImage(file: Pick<File, "size" | "type">): string | null {
   if (!file.type.startsWith("image/")) return "Choose an image file."
   if (file.size > MAX_IMAGE_BYTES) return "Choose an image smaller than 3 MB."
+  return null
+}
+
+export function validateMistakeImages(files: Pick<File, "size" | "type">[]): string | null {
+  if (!files.length) return "Choose at least one image."
+  for (const file of files) {
+    const error = validateMistakeImage(file)
+    if (error) return error
+  }
+  if (files.reduce((total, file) => total + file.size, 0) > MAX_IMAGE_BYTES) return "Choose images totalling less than 3 MB."
   return null
 }
 
@@ -61,8 +121,9 @@ function mistakeContext(mistakes: Mistake[], attempts: ExamAttempt[]) {
   }))
 }
 
-export async function analyseMistakes(mistakes: Mistake[], attempts: ExamAttempt[]): Promise<MistakeInsights> {
+export async function analyseMistakes(mistakes: Mistake[], attempts: ExamAttempt[], onProgress?: (progress: ChatGPTProgress) => void): Promise<MistakeInsights> {
   if (!mistakes.length) throw new Error("Log at least one mistake before generating insights.")
+  onProgress?.({ phase: "connecting", tokens: 0, estimated: true, reasoning: false })
   const { chatgpt, model, settings } = await getChatGPTModel()
   const schema = jsonSchema<Omit<MistakeInsights, "generatedAt" | "practiceQuestions" | "questionsGeneratedAt">>({
     type: "object",
@@ -93,12 +154,14 @@ export async function analyseMistakes(mistakes: Mistake[], attempts: ExamAttempt
     output: Output.object({ schema, name: "mistake_insights" }),
     maxOutputTokens: 900,
     headers: { "x-login-with-chatgpt-reasoning-effort": settings.reasoningEffort },
+    onChunk: createChatGPTProgressHandler(onProgress),
     prompt: `Analyse this student's logged mistakes. Identify the most important recurring knowledge or process gaps, cite concise evidence from the records, notice useful patterns such as subjects, marks, resolution or review history, and give one practical next step. Do not claim a pattern unless the records support it. Use concise student-friendly plain text. Records: ${JSON.stringify(mistakeContext(mistakes, attempts))}`,
   })
   return { ...await result.output, generatedAt: new Date().toISOString() }
 }
 
-export async function generateMistakePracticeQuestions(insights: MistakeInsights, mistakes: Mistake[], attempts: ExamAttempt[]) {
+export async function generateMistakePracticeQuestions(insights: MistakeInsights, mistakes: Mistake[], attempts: ExamAttempt[], onProgress?: (progress: ChatGPTProgress) => void) {
+  onProgress?.({ phase: "connecting", tokens: 0, estimated: true, reasoning: false })
   const { chatgpt, model, settings } = await getChatGPTModel()
   const schema = jsonSchema<{ practiceQuestions: string }>({
     type: "object",
@@ -114,19 +177,29 @@ export async function generateMistakePracticeQuestions(insights: MistakeInsights
     output: Output.object({ schema, name: "practice_questions" }),
     maxOutputTokens: 1400,
     headers: { "x-login-with-chatgpt-reasoning-effort": settings.reasoningEffort },
+    onChunk: createChatGPTProgressHandler(onProgress),
     prompt: `Create 4-6 original practice questions that directly target these diagnosed gaps. Use Markdown with valid LaTeX ($...$ and $$...$$), do not copy the logged questions, order from easier to harder, include marks, then put worked answers in a separate section. Insights: ${JSON.stringify(diagnosis)}. Records: ${JSON.stringify(mistakeContext(mistakes, attempts))}`,
   })
   return (await result.output).practiceQuestions.trim()
 }
 
-export async function analyseMistakeImage(
-  file: File,
+export async function analyseMistakeImages(
+  files: File[],
   attempts: ExamAttempt[],
   selectedAttemptId: string,
+  studies: VcaaStudyResources[],
+  onProgress?: (progress: ChatGPTProgress) => void,
 ): Promise<MistakeDraft> {
-  const validationError = validateMistakeImage(file)
+  const validationError = validateMistakeImages(files)
   if (validationError) throw new Error(validationError)
+  const selectedAttempt = attempts.find((attempt) => attempt.id === selectedAttemptId)
+  if (!selectedAttempt) throw new Error("Choose the exam first so ChatGPT can use the correct paper.")
+  const examPdf = findVcaaExamForAttempt(selectedAttempt, studies)
+  if (selectedAttempt.provider.trim().toLowerCase() === "vcaa" && !examPdf) {
+    throw new Error("This attempt could not be matched to an exam PDF in the VCAA library.")
+  }
 
+  onProgress?.({ phase: "connecting", tokens: 0, estimated: true, reasoning: false })
   const { chatgpt, model, settings } = await getChatGPTModel()
 
   const mistakeSchema = jsonSchema<MistakeDraft>({
@@ -136,7 +209,7 @@ export async function analyseMistakeImage(
     properties: {
       attemptId: { type: "string", enum: ["", ...attempts.map((attempt) => attempt.id)] },
       question: { type: "string", description: "Short question identifier, such as Question 4b" },
-      questionText: { type: "string", description: "The complete exam question, in Markdown with LaTeX where useful" },
+      questionText: { type: "string", description: "A fully self-contained, solvable version of the complete exam question, including every stem, stimulus, diagram, table, definition and referenced context needed to answer it, in Markdown with LaTeX where useful" },
       category: { type: "string", enum: [...MISTAKE_CATEGORIES] },
       explanation: { type: "string", description: "What the student did wrong, in concise Markdown with LaTeX where useful" },
       correction: { type: "string", description: "The correct method, in concise Markdown with LaTeX where useful" },
@@ -146,26 +219,33 @@ export async function analyseMistakeImage(
     id, subject, provider, title, examYear, paper,
   }))
 
+  const imageParts = await Promise.all(files.map(async (file) => ({
+    type: "image" as const,
+    image: await file.arrayBuffer(),
+    mediaType: file.type,
+  })))
   const result = streamText({
     model: chatgpt(model),
     output: Output.object({ schema: mistakeSchema, name: "mistake_log" }),
-    maxOutputTokens: 700,
+    maxOutputTokens: 1200,
     headers: { "x-login-with-chatgpt-reasoning-effort": settings.reasoningEffort },
+    onChunk: createChatGPTProgressHandler(onProgress),
     messages: [{
       role: "user",
       content: [
         {
           type: "text",
-          text: `Read the exam question and the student's working in this image. Identify the student's actual mistake and fill every field for a study mistake log. Match attemptId to one of these logged exams when the image or existing selection supports it: ${JSON.stringify(examOptions)}. The existing selection is ${JSON.stringify(selectedAttemptId)}. Use an empty attemptId if neither is reliable. Use an exact category from the schema. Keep the explanation diagnostic and the correction actionable. Preserve mathematical notation as Markdown LaTeX. If the question number is unreadable, use 'Question unclear' rather than inventing one.`,
+          text: `Read all attached images of the student's question and working. The selected logged exam is ${JSON.stringify(selectedAttempt)}. ${examPdf ? "The attached official VCAA exam PDF is the source of truth: locate the exact question there and use it to restore anything cropped or omitted from the images." : "No official exam PDF is available, so use only the supplied images."} Fill every field for a study mistake log. questionText must stand alone and be solvable without the original paper: include the full stem plus all stimuli, diagrams, tables, definitions, subpart dependencies and other referenced context; describe non-text visuals precisely when needed. Never leave phrases such as 'using the information above' without including that information. Keep the explanation diagnostic and correction actionable, preserve mathematical notation as Markdown LaTeX, use an exact schema category, and use 'Question unclear' instead of inventing an unreadable question number. Available logged exams: ${JSON.stringify(examOptions)}.`,
         },
-        { type: "image", image: await file.arrayBuffer(), mediaType: file.type },
+        ...(examPdf ? [{ type: "file" as const, data: new URL(examPdf.url), mediaType: "application/pdf", filename: examPdf.label }] : []),
+        ...imageParts,
       ],
     }],
   })
 
   const draft = await result.output
   if (!draft.question.trim() || !draft.questionText.trim() || !draft.explanation.trim() || !draft.correction.trim()) {
-    throw new Error("ChatGPT could not read enough of the image to fill the mistake.")
+    throw new Error("ChatGPT could not read enough of the supplied context to fill the mistake.")
   }
   return {
     ...draft,

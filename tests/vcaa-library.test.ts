@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { findVcaaExamReference, getVcaaExamPaper, getVcaaExams, isVcaaExamLogged, type VcaaExamResource } from "../src/lib/vcaa-resources"
+import { findVcaaExamForAttempt, findVcaaExamReference, getVcaaExamPaper, getVcaaExams, isVcaaExamLogged, type VcaaExamResource } from "../src/lib/vcaa-resources"
 import type { AssessmentReference, ExamAttempt } from "../src/lib/exam-data"
 
 const exam: VcaaExamResource = {
@@ -22,6 +22,8 @@ test("matches optional distributions and logged VCAA attempts", () => {
   const reference = { year: 2006, studyName: exam.studyName, name: "WRITTEN EXAMINATION 1" } as AssessmentReference
   const attempt = { provider: "VCAA", examYear: 2006, subject: exam.studyName, paper: "Exam 1" } as ExamAttempt
   expect(findVcaaExamReference(exam, [reference])).toBe(reference)
+  expect(findVcaaExamForAttempt(attempt, [{ studyName: exam.studyName, pageUrl: exam.pageUrl, resources: [exam] }])).toEqual(exam)
+  expect(findVcaaExamForAttempt({ ...attempt, paper: "Exam" }, [{ studyName: exam.studyName, pageUrl: exam.pageUrl, resources: [exam, { ...exam, label: "2006 Mathematical Methods exam 2" }] }])).toBeUndefined()
   expect(isVcaaExamLogged(exam, [attempt])).toBe(true)
   expect(isVcaaExamLogged(exam, [{ ...attempt, paper: "Exam 2" }])).toBe(false)
 })

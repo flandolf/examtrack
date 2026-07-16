@@ -4,19 +4,20 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MarkdownPreview } from "@/components/markdown-preview"
-import { analyseMistakes, generateMistakePracticeQuestions } from "@/lib/mistake-ai"
+import { analyseMistakes, formatChatGPTProgress, generateMistakePracticeQuestions, type ChatGPTProgress } from "@/lib/mistake-ai"
 import type { AppData, MistakeInsights as MistakeInsightsData } from "@/lib/exam-data"
 
 export function MistakeInsights({ data, onSave }: { data: AppData; onSave: (insights: MistakeInsightsData) => void }) {
   const [running, setRunning] = useState(false)
   const [generatingQuestions, setGeneratingQuestions] = useState(false)
+  const [progress, setProgress] = useState<ChatGPTProgress | null>(null)
   const insights = data.mistakeInsights
   const stale = insights && data.mistakes.some((mistake) => mistake.updatedAt > insights.generatedAt)
 
   async function runAnalysis() {
     setRunning(true)
     try {
-      onSave(await analyseMistakes(data.mistakes, data.attempts))
+      onSave(await analyseMistakes(data.mistakes, data.attempts, setProgress))
       toast.success("Mistake insights updated")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not analyse mistakes.")
@@ -29,7 +30,7 @@ export function MistakeInsights({ data, onSave }: { data: AppData; onSave: (insi
     if (!insights) return
     setGeneratingQuestions(true)
     try {
-      const practiceQuestions = await generateMistakePracticeQuestions(insights, data.mistakes, data.attempts)
+      const practiceQuestions = await generateMistakePracticeQuestions(insights, data.mistakes, data.attempts, setProgress)
       onSave({ ...insights, practiceQuestions, questionsGeneratedAt: new Date().toISOString() })
       toast.success("Practice questions generated")
     } catch (error) {
@@ -50,6 +51,7 @@ export function MistakeInsights({ data, onSave }: { data: AppData; onSave: (insi
           {insights ? <RefreshCw /> : <Sparkles />}{running ? "Analysing…" : insights ? "Refresh" : "Analyse mistakes"}
         </Button>
       </CardHeader>
+      {progress ? <p role="status" aria-live="polite" className="px-6 text-sm text-muted-foreground tabular-nums">{formatChatGPTProgress(progress)}</p> : null}
       {insights ? (
         <CardContent className="grid gap-5">
           <p className="text-sm text-muted-foreground">{insights.summary}</p>

@@ -56,3 +56,12 @@ export function isVcaaExamLogged(exam: VcaaExamResource, attempts: ExamAttempt[]
     normaliseComparisonName(attempt.subject) === normaliseComparisonName(exam.studyName) &&
     (paper === "exam" || normaliseComparisonName(attempt.paper) === paper))
 }
+
+export function findVcaaExamForAttempt(attempt: ExamAttempt, studies: VcaaStudyResources[]) {
+  if (normaliseComparisonName(attempt.provider) !== "vcaa") return undefined
+  const paper = normaliseComparisonName(attempt.paper)
+  const candidates = getVcaaExams(studies).filter((exam) => exam.year === attempt.examYear &&
+    normaliseComparisonName(exam.studyName) === normaliseComparisonName(attempt.subject))
+  return candidates.find((exam) => normaliseComparisonName(getVcaaExamPaper(exam)) === paper) ??
+    (paper === "exam" && candidates.length === 1 ? candidates[0] : undefined)
+}

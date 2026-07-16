@@ -559,7 +559,7 @@ export default function App() {
       ) : null}
       {mistakeOpen ? (
         <Suspense fallback={null}>
-          <MistakeSheet open attempts={data.attempts} initialAttemptId={mistakeAttemptId} initialMistake={editingMistake} onOpenChange={setMistakeOpen} onSave={saveMistake} />
+          <MistakeSheet open attempts={data.attempts} studies={resourceStudies} initialAttemptId={mistakeAttemptId} initialMistake={editingMistake} onOpenChange={setMistakeOpen} onSave={saveMistake} />
         </Suspense>
       ) : null}
       {timetable ? (

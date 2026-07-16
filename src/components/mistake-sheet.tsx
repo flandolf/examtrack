@@ -36,11 +36,13 @@ import {
   type MistakeCategory,
   validateMistakeMarks,
 } from "@/lib/exam-data"
-import { analyseMistakeImage, validateMistakeImage } from "@/lib/mistake-ai"
+import { analyseMistakeImages, formatChatGPTProgress, validateMistakeImages, type ChatGPTProgress } from "@/lib/mistake-ai"
+import type { VcaaStudyResources } from "@/lib/vcaa-resources"
 
 type MistakeSheetProps = {
   open: boolean
   attempts: ExamAttempt[]
+  studies: VcaaStudyResources[]
   initialAttemptId?: string | null
   initialMistake?: Mistake | null
   onOpenChange: (open: boolean) => void
@@ -50,6 +52,7 @@ type MistakeSheetProps = {
 export function MistakeSheet({
   open,
   attempts,
+  studies,
   initialAttemptId,
   initialMistake,
   onOpenChange,
@@ -66,8 +69,9 @@ export function MistakeSheet({
   const [criterion, setCriterion] = useState(initialMistake?.criterion ?? "")
   const [totalMarks, setTotalMarks] = useState(initialMistake?.totalMarks ?? 0)
   const [marksLost, setMarksLost] = useState(initialMistake?.marksLost ?? 0)
-  const [image, setImage] = useState<File | null>(null)
+  const [images, setImages] = useState<File[]>([])
   const [analysing, setAnalysing] = useState(false)
+  const [progress, setProgress] = useState<ChatGPTProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const selectedAttempt = attemptId || initialAttemptId || ""
@@ -88,19 +92,19 @@ export function MistakeSheet({
     setCriterion("")
     setTotalMarks(0)
     setMarksLost(0)
-    setImage(null)
+    setImages([])
+    setProgress(null)
     setError(null)
   }
 
   async function analyse() {
-    if (!image) return
-    const validationError = validateMistakeImage(image)
+    const validationError = validateMistakeImages(images)
     if (validationError) return setError(validationError)
 
     setAnalysing(true)
     setError(null)
     try {
-      const draft = await analyseMistakeImage(image, attempts, selectedAttempt)
+      const draft = await analyseMistakeImages(images, attempts, selectedAttempt, studies, setProgress)
       if (draft.attemptId) setAttemptId(draft.attemptId)
       setQuestion(draft.question)
       setQuestionText(draft.questionText)
@@ -157,23 +161,25 @@ export function MistakeSheet({
         <form id="mistake-form" className="px-4 pb-4" onSubmit={submit}>
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="mistake-image">Question and working photo</FieldLabel>
+              <FieldLabel htmlFor="mistake-image">Question and working images</FieldLabel>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   id="mistake-image"
                   type="file"
                   accept="image/*"
-                  capture="environment"
+                  multiple
                   onChange={(event) => {
-                    setImage(event.target.files?.[0] ?? null)
+                    setImages(Array.from(event.target.files ?? []))
+                    setProgress(null)
                     setError(null)
                   }}
                 />
-                <Button type="button" variant="secondary" disabled={!image || analysing || !auth.isAuthenticated} onClick={() => void analyse()}>
+                <Button type="button" variant="secondary" disabled={!images.length || !selectedAttempt || analysing || !auth.isAuthenticated} onClick={() => void analyse()}>
                   <Sparkles />{analysing ? "Analysing…" : "Fill with AI"}
                 </Button>
               </div>
-              <FieldDescription>Upload or take a photo up to 3 MB. Review the generated fields before saving.</FieldDescription>
+              <FieldDescription>Choose the exam, then upload one or more images totalling up to 3 MB. VCAA attempts also include the matching official exam PDF.</FieldDescription>
+              {progress ? <p role="status" aria-live="polite" className="text-sm text-muted-foreground tabular-nums">{formatChatGPTProgress(progress)}</p> : null}
               <div className="rounded-lg border bg-muted/30 p-3">
                 {auth.status === "loading" ? <p className="text-sm text-muted-foreground">Checking ChatGPT connection…</p> : null}
 

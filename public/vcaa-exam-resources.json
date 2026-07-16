@@ -1,6 +1,6 @@
 {
   "parserVersion": "vcaa-exam-resources-v1",
-  "generatedAt": "2026-07-15T10:15:28.229Z",
+  "generatedAt": "2026-07-16T04:35:22.508Z",
   "sourceUrl": "https://www.vcaa.vic.edu.au/assessment/vce/examination-specifications-past-examinations-and-examination-reports/examination-specifications-past-examinations-and-external-assessment-reports",
   "studies": [
     {
@@ -11,25 +11,25 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/dance-perf-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Statement of Intention",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026VCEDancePerf-Statement-of-Intention.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Advice for dance performance examinations",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026VCEDance-and-VETDance-PerformanceAdvice.docx",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2026
         },
         {
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/dance-written-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -479,7 +479,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/drama-solo-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2026 VCE Drama solo performance examination",
@@ -491,31 +491,31 @@
           "label": "Statement of Intention",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-04/2026drama-solo-statement-of-intention.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Performance advice",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-06/2026drama-theatre-performance-advice.docx",
-          "kind": "other",
-          "year": null
+          "kind": "report",
+          "year": 2026
         },
         {
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/drama-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/drama-sample-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample Insert",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/drama-sample-insert-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Drama solo performance examination",
@@ -730,7 +730,7 @@
         {
           "label": "2017 Drama written exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/drama/2017/dramaw_examrep17.pdf",
-          "kind": "exam",
+          "kind": "report",
           "year": 2017
         },
         {
@@ -754,7 +754,7 @@
         {
           "label": "2016 Drama written exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/drama/2016/drama_examrep16.pdf",
-          "kind": "exam",
+          "kind": "report",
           "year": 2016
         }
       ]
@@ -767,31 +767,31 @@
           "label": "Externally assessed task specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicCompositionEATSpecifications.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Expected qualities",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/2025%20VCE%20Music%20Composition%20EAT%20Expected%20Qualities.docx",
           "kind": "report",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Authentication record",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/music/2023MusicCompositionEATAuthenticationRecord.docx",
           "kind": "other",
-          "year": null
+          "year": 2023
         },
         {
           "label": "Implementation guide",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicComposition-EAT-Implementation-guide.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-05/music-composition-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample aural and written examination",
@@ -1151,7 +1151,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/music-contemporary-perf-perf-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Authentication form",
@@ -1163,25 +1163,25 @@
           "label": "Statement of Expressive Intention",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicContemporaryPerformance-Statement-of-Expressive-Intention.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Recording consent",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicContemporaryPerformance-Recording-Consent.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Performance advice",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026music-performance-examination-advice.docx",
-          "kind": "other",
-          "year": null
+          "kind": "report",
+          "year": 2026
         },
         {
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-05/music-contemporary-perf-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample aural and written examination",
@@ -1565,37 +1565,37 @@
           "label": "Externally assessed task specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicInquiryEATspecs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Expected qualities",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/2025%20VCE%20Music%20Inquiry%20EAT%20Expected%20Qualities.docx",
           "kind": "report",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Authentication record",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-08/2025MusicInquiry-EAT-AuthenticationRecord_0.docx",
           "kind": "other",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Implementation guide",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicInquiry-EAT-Implementation-guide.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Cover Sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/2025%20VCE%20Music%20Inquiry%20EAT%20Cover%20Sheet.docx",
           "kind": "other",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-05/music-inquiry-aural-and-written-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample aural and written examination",
@@ -1745,43 +1745,43 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/music-repertoire-perf-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Program sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicRepertoirePerformance-program-sheet.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Recording consent",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicRepertoirePerformance-recording-consent.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Performance advice",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026music-performance-examination-advice.docx",
-          "kind": "other",
-          "year": null
+          "kind": "report",
+          "year": 2026
         },
         {
           "label": "Prescribed List of Instruments and Works",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicRepertoirePerformance-prescribed-list-of-instruments-and-works.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Alternative Instrument and Work Application Form",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026MusicRepertoirePerformance-alternative-instrument-application.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/music-repertoire-perf-written-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Sample aural and written examination",
@@ -2165,7 +2165,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/theatre-monologue-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2026 VCE Theatre Studies monologue examination",
@@ -2177,31 +2177,31 @@
           "label": "Interpretation Statement",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-04/2026theatre-monologue-interpretation-statement.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Performance advice",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-06/2026drama-theatre-performance-advice.docx",
-          "kind": "other",
-          "year": null
+          "kind": "report",
+          "year": 2026
         },
         {
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/theatre-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/theatre-studies-sample-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample Insert",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/theatre-sample-insert-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Theatre Studies monologue examination",
@@ -2453,7 +2453,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/art-CP-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -2591,7 +2591,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/art-ME-specs-w_0.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -2729,7 +2729,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/media-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -3035,7 +3035,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/vcd-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -3179,7 +3179,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/english-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -3227,7 +3227,7 @@
           "label": "English Exam transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/VCE_English_Exam.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2023 English exam",
@@ -3515,7 +3515,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/eal-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -3887,7 +3887,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/engl-lang-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -4031,7 +4031,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/literature-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination - Section A",
@@ -4049,7 +4049,7 @@
           "label": "Assessment criteria and expected qualities",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/literature-criteria-qualities.docx",
           "kind": "report",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample answer book",
@@ -4175,7 +4175,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/foundation-maths-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -4187,7 +4187,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_FoundationMath.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Formula sheet",
@@ -4235,7 +4235,7 @@
           "label": "Foundation Mathematics Examination transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/Foundation_Mathematics_Examination.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2023 VCE Foundation Mathematics examination",
@@ -4259,7 +4259,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/genmath-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination 1",
@@ -4277,7 +4277,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_GeneralMaths1.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination 2",
@@ -4367,7 +4367,7 @@
           "label": "General Mathematics Examination 2 transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/General_Maths_Examination_2.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2023 VCE General Mathematics examination 1",
@@ -4811,7 +4811,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/mathmethods-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions for written examination 1",
@@ -4841,7 +4841,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_MathMethods2.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Mathematical Methods examination 1",
@@ -4919,13 +4919,13 @@
           "label": "Mathematics Methods Examination 1 transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/VCE_Mathematical_Methods_Exam_1.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Mathematics Methods Examination 2 transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/Mathematics_Methods_Examination_2.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2023 VCE Mathematical Methods 1 examination",
@@ -5369,7 +5369,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/specmaths-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions for written examination 1",
@@ -5399,7 +5399,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_SpecialistMaths2.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Specialist Mathematics examination 1",
@@ -5477,13 +5477,13 @@
           "label": "Specialist Mathematics Examination 1 transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/Specialist_Maths_1_Examination.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Specialist Mathematics Examination 2 transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/Specialist_Mathematics_Examination_2.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2023 VCE Specialist Mathematics examination 1",
@@ -5927,7 +5927,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/biology-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -5939,7 +5939,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_Biology.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Biology examination",
@@ -6371,7 +6371,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/chemistry_specs_w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -6383,7 +6383,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_Chemistry.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2026 VCE Chemistry Data Book",
@@ -6827,7 +6827,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/envscience-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -6839,7 +6839,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_EnviroScience.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Environmental Science examination",
@@ -6869,7 +6869,7 @@
           "label": "Environmental Science Examination transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/VCE_Environmental_Science_Exam.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2023 VCE Environmental Science examination",
@@ -7277,7 +7277,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/physics-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -7289,13 +7289,13 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_Physics.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Formula sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/Physics-FormulaSheet.pdf",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "2025 VCE Physics examination",
@@ -7751,7 +7751,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/psychology-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -7763,7 +7763,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_Psychology.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Psychology examination",
@@ -7793,7 +7793,7 @@
           "label": "Psychology Examination transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/Psychology_Examination.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2023 VCE Psychology examination",
@@ -8201,7 +8201,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/history-ancient-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Assessment criteria and expected qualities for Section B – Essay",
@@ -8351,7 +8351,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/history-aus-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Assessment criteria and expected qualities for Section B – Essay",
@@ -8627,7 +8627,7 @@
           "label": "205 Australian History exam report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/history/historyaustralianassessreportnov05.pdf",
           "kind": "report",
-          "year": null
+          "year": 2005
         },
         {
           "label": "2004 Australian History exam report",
@@ -8645,25 +8645,25 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/classical-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Assessment criteria and expected qualities",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/classical-criteria-w.docx",
           "kind": "report",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/classical-sample-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample stimulus book",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/classical-stimulus-sample-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Classical Studies examination",
@@ -8783,7 +8783,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/geography-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -8927,19 +8927,19 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/philosophy-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/philosophy-sample-w_1.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Assessment criteria and expected qualities",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-08/philosophy-assessment-criteria.docx",
           "kind": "report",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Philosophy examination",
@@ -9041,199 +9041,199 @@
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2018/2018philos-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2018
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2018/philosophy_examrep18.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2018
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2017/2017philos-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2017
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2017/philosophy_examrep17.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2017
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2016/2016philos-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2016
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2016/philosophy_examrep16.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2016
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2015/2015philos-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2015
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2015/philosophy_examrep15.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2015
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2014/2014philos-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2014
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2014/philosophy_examrep14.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2014
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2013/2013philos-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2013
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2013/philosophy_examrep13.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2013
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2012/2012philos-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2012
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2012/philosophy_assessrep12.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2012
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2011philos-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2011
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/philosophy_assessrep_11.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2011
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2010philos-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2010
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/philosophy_assessrep_10.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2010
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2009philos-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2009
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/philosophy_assessrep_09.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2009
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2008philos-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2008
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/philosophy_assessrep_08.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2008
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2007philos.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2007
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/philosophy_assessrep_07.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2007
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2006philos-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2006
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/philosophy_assessrep_06.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2006
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2005philos.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2005
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/philosophynov05.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2005
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2004philos.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2004
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/philosnov04.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2004
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/2003_philos.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2003
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/phil_assrep03.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2003
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/philosophy/philosophy2002.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2002
         },
         {
           "label": "Exam",
@@ -9251,13 +9251,13 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/politics-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/politics-sample-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Politics examination",
@@ -9281,7 +9281,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/religion-and-society-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -9599,7 +9599,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/hist-rev-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Assessment criteria and expected qualities for Section B – Essay",
@@ -9929,7 +9929,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/sociology-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -10187,7 +10187,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/textstrad-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -10487,7 +10487,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-03/accounting-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Accounting examination",
@@ -10931,7 +10931,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/busman-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -11237,7 +11237,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/economics-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -11249,7 +11249,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_Economics.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Economics examination",
@@ -11537,7 +11537,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/indent-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -11633,163 +11633,163 @@
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2018/2018ind-ent-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2018
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2018/industryenterprise_examrep18.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2018
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2017/2017ind-ent-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2017
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2017/industryenterprise_examrep17.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2017
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2016/2016ind-ent-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2016
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2016/industryenterprise_examrep16.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2016
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2015/2015ind-ent-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2015
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2015/indent_examrep15.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2015
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2014/2014ind-ent-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2014
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2014/indent_examrep14.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2014
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2013/2013ind-ent-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2013
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2013/indent_examrep13.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2013
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2012/2012ind-ent-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2012
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2012/indent_assessrep12.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2012
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2011ind-ent-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2011
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/Industryent_assessrep_11.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2011
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2010ind-ent-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2010
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/industryent_assessrep_10.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2010
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2009ind-ent-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2009
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/industryent_assessrep_09.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2009
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2008ind-ent-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2008
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/industryent_assessrep_08.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2008
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2007ind-ent.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2007
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/industryent_assessrep_07.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2007
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2006ind-ent-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2006
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/industryent_assessrep_06.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2006
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2005indent.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2005
         },
         {
           "label": "Exam",
@@ -11801,7 +11801,7 @@
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/indent2004.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2004
         },
         {
           "label": "Exam",
@@ -11813,7 +11813,7 @@
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/2003_Ind_Ent.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2003
         },
         {
           "label": "Exam",
@@ -11825,7 +11825,7 @@
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/industryenterprise/IndEnt2002.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2002
         },
         {
           "label": "Exam",
@@ -11843,7 +11843,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/legal-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -12149,7 +12149,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/algorithmics-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -12161,7 +12161,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_Algorithmics.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Algorithmics (HESS) examination",
@@ -12305,19 +12305,19 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-05/AC-data-analytics-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/AC-data-analytics-sampleQ-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_AppliedComputing-DataAnalytics.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Applied Computing: Data Analytics examination",
@@ -12401,19 +12401,19 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/AC-software-development-specs-w.pdf_1.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/AC-software-development-sampleQ-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_AppliedComputing-SoftwareDev.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Applied Computing: Software Development examination",
@@ -12497,7 +12497,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/aghort-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -12689,103 +12689,103 @@
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/2010aghort-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2010
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/aghort_assessrep_10.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2010
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/2009aghort-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2009
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/aghort_assessrep_09.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2009
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/2008aghort-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2008
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/aghort_assessrep_08.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2008
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/2007aghort.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2007
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/agandhort_assessrep_07.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2007
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/2006aghort-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2006
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/aghort_assessrep_06.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2006
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/2005aghort.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2005
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/agrihortassessreportnov05.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2005
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/2004aghort.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2004
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/aghortnov04.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2004
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/2003_aghort.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2003
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/aghort_assrep03.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2003
         },
         {
           "label": "Exam",
           "url": "https://sites/default/files/Documents/exams/agrihorculture/aghort2002.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2002
         },
         {
           "label": "Exam",
@@ -12803,7 +12803,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/foodstudies-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample questions",
@@ -12815,7 +12815,7 @@
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_FoodStudies.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Food Studies examination",
@@ -12947,7 +12947,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/pdt-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample written examination",
@@ -13265,31 +13265,31 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/systems-engineering-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Sample questions",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/SystemsEngineering-SampleQuestions.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_SystemsEngineering.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Formula sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/SystemsEngineering-FormulaSheet.pdf",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Table of electrotechnological symbols",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/2026SystemsEngineering_Electrotechnological_symbols.docx",
           "kind": "other",
-          "year": null
+          "year": 2026
         },
         {
           "label": "2025 VCE Systems Engineering examination",
@@ -13529,13 +13529,13 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/health-human-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Sample written examination",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/health-human-dev-sample-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Health and Human Development examination",
@@ -13565,7 +13565,7 @@
           "label": "Health and Human Development Examination transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/Health_and_Human_Development_2024_Examination.docx",
           "kind": "exam",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2023 VCE Health and Human Development examination",
@@ -13655,187 +13655,187 @@
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2017/2017health-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2017
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2017/hhd_examrep17.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2017
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2016/2016health-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2016
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2016/healthhuman_examrep16.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2016
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2015/2015health-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2015
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2015/hhd_examrep15.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2015
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2014/2014health-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2014
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2014/hhd_examreport14.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2014
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2013/2013health-amd-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2013
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2013/HHD_examrep13.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2013
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2012/2012health-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2012
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2012/healthhuman_assessrep_12.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2012
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2011health-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2011
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/healthhumdev_assessrep_11.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2011
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2010health-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2010
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/healthhumdev_assessrep_10.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2010
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2009healthhumdev-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2009
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/healthhumdev_assessrep_09.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2009
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2008hea-humdev-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2008
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/heathhumandev_assessrep_08.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2008
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2007health-humdev.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2007
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/healthhum_assessrep_07.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2007
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2006hea-humdev-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2006
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/healthhumdev_assessrep_06.pdf",
-          "kind": "exam",
-          "year": null
+          "kind": "report",
+          "year": 2006
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2005healhumdev.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2005
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/HealthHumanDevAssReportNov2005.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2005
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2004health.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2004
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/healthhumassrep04.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2004
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/2003_h_hd.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2003
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/HealthHumAssRep2003.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2003
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/hhd/health2002.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2002
         },
         {
           "label": "Exam",
@@ -13853,7 +13853,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/outdoor-enviro-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Sample written examination",
@@ -14171,19 +14171,19 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/physical-education-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Sample written examination",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/physical-eduation-sample-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Sample multiple-choice answer sheet",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-10/MCAS_PhysicalEducation.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Physical Education examination",
@@ -14297,163 +14297,163 @@
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2017/2017physed-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2017
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2017/physed_examrep17.pdf",
           "kind": "report",
-          "year": null
+          "year": 2017
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2016/2016physed-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2016
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2016/physed_examrep16.pdf",
           "kind": "report",
-          "year": null
+          "year": 2016
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2015/2015physed-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2015
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2015/physed_examrep15.pdf",
           "kind": "report",
-          "year": null
+          "year": 2015
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2014/2014physed-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2014
         },
         {
           "label": "​Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2014/physed_examreport14.pdf",
           "kind": "report",
-          "year": null
+          "year": 2014
         },
         {
           "label": "Exam​",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2013/2013physed-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2013
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2013/physed_examrep13.pdf",
           "kind": "report",
-          "year": null
+          "year": 2013
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2012/2012physed-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2012
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2012/Physed_assessrep_12.pdf",
           "kind": "report",
-          "year": null
+          "year": 2012
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2011physed-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2011
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/physed_assessrep_11.pdf",
           "kind": "report",
-          "year": null
+          "year": 2011
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2010physed-cpr-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2010
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/physed_assessrep_10.pdf",
           "kind": "report",
-          "year": null
+          "year": 2010
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2009physed-w-cpyrgt.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2009
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/physed_assessrep_09.pdf",
           "kind": "report",
-          "year": null
+          "year": 2009
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2008physed-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2008
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/phys_ed_assessrep_08.pdf",
           "kind": "report",
-          "year": null
+          "year": 2008
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2007physed-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2007
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/pe_assessrep_07.pdf",
           "kind": "report",
-          "year": null
+          "year": 2007
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2006physed-w.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2006
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/physicaedasessrptnov06.pdf",
           "kind": "report",
-          "year": null
+          "year": 2006
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2005physed.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2005
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/peassrep05.pdf",
           "kind": "report",
-          "year": null
+          "year": 2005
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/physed2004.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2004
         },
         {
           "label": "Report",
@@ -14465,37 +14465,37 @@
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/2003_physed.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2003
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/physed_wr_03.pdf",
           "kind": "report",
-          "year": null
+          "year": 2003
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/physed2002.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2002
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/pe_02.pdf",
           "kind": "report",
-          "year": null
+          "year": 2002
         },
         {
           "label": "Exam",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/physed2001.pdf",
           "kind": "exam",
-          "year": null
+          "year": 2001
         },
         {
           "label": "Report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/physicaledu/physicaled2001.pdf",
           "kind": "report",
-          "year": null
+          "year": 2001
         }
       ]
     },
@@ -14512,7 +14512,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-03/accounting-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2026 VCE Accounting examination",
@@ -14620,7 +14620,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/biology-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Biology examination",
@@ -14698,7 +14698,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/chemistry_specs_w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Chemistry examination",
@@ -14800,13 +14800,13 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/chineseFL-oral-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/chinese-FL-written-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2026 VCE Chinese FL examination",
@@ -15010,7 +15010,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/english-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2024 VCE English examination",
@@ -15088,7 +15088,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/eal-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Assessment criteria and expected qualities",
@@ -15232,7 +15232,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/genmath-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2026 VCE General Mathematics examination 1",
@@ -15466,7 +15466,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/mathmethods-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2026 VCE Mathematical Methods examination 1",
@@ -15700,7 +15700,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/physics-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2026 VCE Physics examination",
@@ -15808,7 +15808,7 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/specmaths-specs-w.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2026 VCE Specialist Mathematics examination 1",
@@ -16048,19 +16048,19 @@
           "label": "Examination specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/extended-investigation-CTT-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Technical specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-03/extended-investigation-CTT-technical%20specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Sample questions",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/CTT-Sample-Questions-w.pdf",
           "kind": "sample",
-          "year": null
+          "year": 2025
         },
         {
           "label": "2025 VCE Extended Investigation Critical Thinking Test",
@@ -16150,91 +16150,91 @@
           "label": "Critical Thinking Test",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/ctt_2018.pdf",
           "kind": "other",
-          "year": null
+          "year": 2018
         },
         {
           "label": "Critical Thinking Test report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/ctt_examrep18.pdf",
           "kind": "report",
-          "year": null
+          "year": 2018
         },
         {
           "label": "Critical Thinking Test",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/ctt_2017.pdf",
           "kind": "other",
-          "year": null
+          "year": 2017
         },
         {
           "label": "Critical Thinking Test report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/ctt_examrep17.pdf",
           "kind": "report",
-          "year": null
+          "year": 2017
         },
         {
           "label": "Critical Thinking Test",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/ctt_2016.pdf",
           "kind": "other",
-          "year": null
+          "year": 2016
         },
         {
           "label": "Critical Thinking Test report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/ctt_examrep16.pdf",
           "kind": "report",
-          "year": null
+          "year": 2016
         },
         {
           "label": "Critical Thinking Test",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/ctt_2015.pdf",
           "kind": "other",
-          "year": null
+          "year": 2015
         },
         {
           "label": "Critical Thinking Test report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/CTT_examrep15.pdf",
           "kind": "report",
-          "year": null
+          "year": 2015
         },
         {
           "label": "Critical Thinking Test",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/ctt_2014.pdf",
           "kind": "other",
-          "year": null
+          "year": 2014
         },
         {
           "label": "Critical Thinking Test report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/ctt_examrep14.pdf",
           "kind": "report",
-          "year": null
+          "year": 2014
         },
         {
           "label": "Assessment criteria and performance-level descriptors – Oral presentation",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/2026ExtendedInvestigationPerformanceDescriptors-oral.docx",
           "kind": "report",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Assessment criteria and performance-level descriptors – Written report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-02/2026ExtendedInvestigationPerformanceDescriptors-written.docx",
           "kind": "report",
-          "year": null
+          "year": 2026
         },
         {
           "label": "Oral presentation specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/extended-investigation-oral%20EAT-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Written report specifications",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/extended-investigation-written-EAT-specs.docx",
           "kind": "specification",
-          "year": null
+          "year": 2025
         },
         {
           "label": "Oral presentation advice",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2026-01/2026ExtendedInvestigation-oral-presentation-advice.docx",
-          "kind": "other",
-          "year": null
+          "kind": "report",
+          "year": 2026
         },
         {
           "label": "2025 VCE Extended Investigation EAT oral external assessment report",
@@ -16311,7 +16311,7 @@
         {
           "label": "2019 Extended Investigation Oral presentation",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/2019/extendedinvestigationoral_examrep19.pdf",
-          "kind": "other",
+          "kind": "report",
           "year": 2019
         },
         {
@@ -16323,62 +16323,62 @@
         {
           "label": "Oral presentation",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/eioral_examrep18.pdf",
-          "kind": "other",
-          "year": null
+          "kind": "report",
+          "year": 2018
         },
         {
           "label": "Written report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/eiwritten_examrep18.pdf",
           "kind": "report",
-          "year": null
+          "year": 2018
         },
         {
           "label": "Oral presentation",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/eioral_examrep17.pdf",
-          "kind": "other",
-          "year": null
+          "kind": "report",
+          "year": 2017
         },
         {
           "label": "Written report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/eiwritten_examrep17.pdf",
           "kind": "report",
-          "year": null
+          "year": 2017
         },
         {
           "label": "Oral presentation",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/eioral_examrep16.pdf",
-          "kind": "other",
-          "year": null
+          "kind": "report",
+          "year": 2016
         },
         {
           "label": "Written report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/eiwritten_examrep16.pdf",
           "kind": "report",
-          "year": null
+          "year": 2016
         },
         {
           "label": "Oral presentation",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/EIoralpresentation_examrep15.pdf",
-          "kind": "other",
-          "year": null
+          "kind": "report",
+          "year": 2015
         },
         {
           "label": "Written report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/EIwritten_examrep15.pdf",
           "kind": "report",
-          "year": null
+          "year": 2015
         },
         {
           "label": "Oral presentation",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/eioral_examreport14.pdf",
-          "kind": "other",
+          "kind": "report",
           "year": null
         },
         {
           "label": "Written report",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/extendedinvestigation/eiwritten_examrep14.pdf",
           "kind": "report",
-          "year": null
+          "year": 2014
         }
       ]
     }

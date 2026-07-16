@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { ExternalLink, Play, Search } from "lucide-react"
+import { Check, ExternalLink, Play, Search } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -7,26 +7,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { SubjectCombobox } from "@/components/subject-combobox"
 import { PageHeader } from "@/components/page-header"
-import { formatReferenceName, normaliseComparisonName, type AssessmentReference } from "@/lib/exam-data"
+import { normaliseComparisonName, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
 import type { ExamTimerPreset } from "@/components/exam-timer"
 import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
-import { formatReferenceFreshness, getVcaaExamResourcesUrl, type VcaaResource, type VcaaStudyResources } from "@/lib/vcaa-resources"
+import { findVcaaExamReference, formatReferenceFreshness, getVcaaExamPaper, getVcaaExamResourcesUrl, getVcaaExams, isVcaaExamLogged, type VcaaExamResource, type VcaaResource, type VcaaStudyResources } from "@/lib/vcaa-resources"
 
-function pickResource(resources: VcaaResource[], kind: VcaaResource["kind"], reference: AssessmentReference) {
-  const candidates = resources.filter((resource) => resource.kind === kind && (resource.year === reference.year || resource.year === null))
-  const paper = normaliseComparisonName(reference.name)
+function pickResource(resources: VcaaResource[], kind: VcaaResource["kind"], exam: VcaaExamResource) {
+  const candidates = resources.filter((resource) => resource.kind === kind && (resource.year === exam.year || resource.year === null))
+  const paper = normaliseComparisonName(getVcaaExamPaper(exam))
   return candidates.find((resource) => normaliseComparisonName(resource.label).includes(paper)) ?? candidates[0]
 }
 
-export function ExamLibrary({ references, studies, generatedAt, preferredSubjects, onStart }: { references: AssessmentReference[]; studies: VcaaStudyResources[]; generatedAt: string | null; preferredSubjects: string[]; onStart: (preset: ExamTimerPreset) => void }) {
-  const subjects = useMemo(() => prioritiseSubjects(references.map((reference) => reference.studyName), preferredSubjects), [preferredSubjects, references])
+export function ExamLibrary({ references, studies, attempts, completedExamIds, generatedAt, preferredSubjects, onToggleCompleted, onStart }: { references: AssessmentReference[]; studies: VcaaStudyResources[]; attempts: ExamAttempt[]; completedExamIds: string[]; generatedAt: string | null; preferredSubjects: string[]; onToggleCompleted: (id: string) => void; onStart: (preset: ExamTimerPreset) => void }) {
+  const exams = useMemo(() => getVcaaExams(studies), [studies])
+  const subjects = useMemo(() => prioritiseSubjects(exams.map((exam) => exam.studyName), preferredSubjects), [exams, preferredSubjects])
   const [subject, setSubject] = useState(() => firstPreferredSubject(subjects, preferredSubjects) || "all")
   const [query, setQuery] = useState("")
-  const filtered = useMemo(() => references.filter((reference) =>
-    (subject === "all" || reference.studyName === subject) &&
-    `${reference.studyName} ${reference.year} ${reference.name}`.toLowerCase().includes(query.trim().toLowerCase()),
-  ).toSorted((first, second) => second.year - first.year || first.name.localeCompare(second.name)), [query, references, subject])
-  const visible = filtered.slice(0, 60)
+  const filtered = useMemo(() => {
+    const priorities = new Map(preferredSubjects.map((item, index) => [normaliseComparisonName(item), index]))
+    return exams.filter((exam) =>
+      (subject === "all" || exam.studyName === subject) &&
+      `${exam.studyName} ${exam.year} ${exam.label}`.toLowerCase().includes(query.trim().toLowerCase()),
+    ).toSorted((first, second) =>
+      (priorities.get(normaliseComparisonName(first.studyName)) ?? Infinity) - (priorities.get(normaliseComparisonName(second.studyName)) ?? Infinity) ||
+      (second.year ?? 0) - (first.year ?? 0) || first.label.localeCompare(second.label))
+  }, [exams, preferredSubjects, query, subject])
   const resourcesByStudy = useMemo(() => new Map(studies.map((study) => [normaliseComparisonName(study.studyName), study])), [studies])
 
   return (
@@ -40,34 +45,37 @@ export function ExamLibrary({ references, studies, generatedAt, preferredSubject
       <div className="flex flex-wrap gap-3">
         <SubjectCombobox subjects={subjects} preferredSubjects={preferredSubjects} value={subject} onValueChange={setSubject} includeAll className="w-full sm:w-72" placeholder="Search subjects" />
         <Input className="w-full sm:max-w-sm" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search subject, year or paper" aria-label="Search exam library" />
-        <span className="self-center text-sm text-muted-foreground">{formatReferenceFreshness(generatedAt)}</span>
+        <span className="self-center text-sm text-muted-foreground">{filtered.length} exams · {formatReferenceFreshness(generatedAt)}</span>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        {visible.map((reference) => {
-          const study = resourcesByStudy.get(normaliseComparisonName(reference.studyName))
-          const exam = pickResource(study?.resources ?? [], "exam", reference)
-          const report = pickResource(study?.resources ?? [], "report", reference)
-          const specification = pickResource(study?.resources ?? [], "specification", reference)
+        {filtered.map((exam) => {
+          const study = resourcesByStudy.get(normaliseComparisonName(exam.studyName))
+          const reference = findVcaaExamReference(exam, references)
+          const report = pickResource(study?.resources ?? [], "report", exam)
+          const specification = pickResource(study?.resources ?? [], "specification", exam)
+          const logged = isVcaaExamLogged(exam, attempts)
+          const manuallyCompleted = completedExamIds.includes(exam.url)
+          const completed = logged || manuallyCompleted
           return (
-          <Card key={reference.id} className="min-w-0">
+          <Card key={exam.url} className="min-w-0">
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0"><CardTitle>{reference.studyName}</CardTitle><CardDescription>{reference.year} · {formatReferenceName(reference.name)}</CardDescription></div>
-                <Badge variant="outline">{reference.maxScore} marks</Badge>
+                <div className="min-w-0"><CardTitle>{exam.studyName}</CardTitle><CardDescription>{exam.year ?? "Unknown year"} · {getVcaaExamPaper(exam)}</CardDescription></div>
+                <div className="flex gap-2">{completed ? <Badge><Check />{logged ? "Logged" : "Done"}</Badge> : null}{reference ? <Badge variant="outline">{reference.maxScore} marks</Badge> : <Badge variant="secondary">Archive · no distribution</Badge>}</div>
               </div>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
-              <Button onClick={() => onStart({ subject: reference.studyName, provider: "VCAA", examYear: reference.year, paper: formatReferenceName(reference.name), marks: reference.maxScore })}><Play />Start timed attempt</Button>
-              {exam ? <Button variant="outline" render={<a href={exam.url} target="_blank" rel="noreferrer" />}><ExternalLink />Exam paper</Button> : null}
+              {exam.year !== null ? <Button onClick={() => onStart({ subject: exam.studyName, provider: "VCAA", examYear: exam.year!, paper: getVcaaExamPaper(exam), marks: reference?.maxScore ?? 40 })}><Play />Start timed attempt</Button> : null}
+              <Button variant="outline" render={<a href={exam.url} target="_blank" rel="noreferrer" />}><ExternalLink />Exam paper</Button>
               {report ? <Button variant="outline" render={<a href={report.url} target="_blank" rel="noreferrer" />}><ExternalLink />Examiner report</Button> : null}
               {specification ? <Button variant="ghost" render={<a href={specification.url} target="_blank" rel="noreferrer" />}><ExternalLink />Specifications</Button> : null}
-              <Button variant="ghost" render={<a href={reference.sourceUrl} target="_blank" rel="noreferrer" />}><ExternalLink />Distribution</Button>
+              {reference ? <Button variant="ghost" render={<a href={reference.sourceUrl} target="_blank" rel="noreferrer" />}><ExternalLink />Distribution</Button> : null}
+              {!logged ? <Button variant="ghost" onClick={() => onToggleCompleted(exam.url)}><Check />{manuallyCompleted ? "Mark not done" : "Mark done"}</Button> : null}
             </CardContent>
           </Card>
         )})}
       </div>
-      {filtered.length > visible.length ? <p className="text-center text-sm text-muted-foreground">Showing the first {visible.length} results. Choose a subject or refine the search.</p> : null}
-      {!filtered.length ? <p className="rounded-lg border p-8 text-center text-sm text-muted-foreground">No matching VCAA assessment references.</p> : null}
+      {!filtered.length ? <p className="rounded-lg border p-8 text-center text-sm text-muted-foreground">No matching VCAA exams.</p> : null}
     </div>
   )
 }

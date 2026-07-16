@@ -373,6 +373,16 @@ export default function App() {
     setData((current) => ({ ...current, subjects, subjectsUpdatedAt: new Date().toISOString() }))
   }
 
+  function toggleCompletedExam(id: string) {
+    setData((current) => ({
+      ...current,
+      completedExamIds: current.completedExamIds.includes(id)
+        ? current.completedExamIds.filter((examId) => examId !== id)
+        : [...current.completedExamIds, id],
+      completedExamIdsUpdatedAt: new Date().toISOString(),
+    }))
+  }
+
   function saveMistake(mistake: Mistake) {
     setData((current) => ({
       ...current,
@@ -511,7 +521,7 @@ export default function App() {
             </Suspense>
           ) : null}
           {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onReview={reviewMistake} onDelete={deleteMistake} /> : null}
-          {view === "library" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamLibrary references={references} studies={resourceStudies} generatedAt={resourcesGeneratedAt ?? referencesGeneratedAt} preferredSubjects={data.subjects} onStart={(preset) => { setTimerPreset(preset); setView("timer") }} /></Suspense> : null}
+          {view === "library" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamLibrary references={references} studies={resourceStudies} attempts={data.attempts} completedExamIds={data.completedExamIds} generatedAt={resourcesGeneratedAt ?? referencesGeneratedAt} preferredSubjects={data.subjects} onToggleCompleted={toggleCompletedExam} onStart={(preset) => { setTimerPreset(preset); setView("timer") }} /></Suspense> : null}
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer key={timerPreset ? `${timerPreset.subject}-${timerPreset.examYear}-${timerPreset.paper}` : "manual"} references={references} preferredSubjects={data.subjects} initialExam={timerPreset} onSave={(attempt) => { setTimerPreset(null); saveTimedAttempt(attempt) }} /></Suspense> : null}
           {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} scalingReferences={scalingReferences} /></Suspense> : null}
           {view === "vcaa" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><VcaaExplorer references={references} attempts={data.attempts} preferredSubjects={data.subjects} /></Suspense> : null}

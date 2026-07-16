@@ -10,3 +10,16 @@ test("parses VCAA study pages and classifies official resources", () => {
       { label: "2025 English external assessment report", url: "https://www.vcaa.vic.edu.au/files/2025-report.docx", kind: "report", year: 2025 },
     ])
 })
+
+test("recovers archive years from URLs and does not classify assessment reports as exams", () => {
+  expect(parseStudyResources('<a href="/Documents/exams/philosophy/2006philos-w.pdf">Exam</a><a href="/Documents/exams/philosophy/philosophy_assessrep_06.pdf">Exam</a>'))
+    .toEqual([
+      { label: "Exam", url: "https://www.vcaa.vic.edu.au/Documents/exams/philosophy/2006philos-w.pdf", kind: "exam", year: 2006 },
+      { label: "Exam", url: "https://www.vcaa.vic.edu.au/Documents/exams/philosophy/philosophy_assessrep_06.pdf", kind: "report", year: 2006 },
+    ])
+})
+
+test("repairs VCAA's protocol-relative archive paths", () => {
+  expect(parseStudyResources('<a href="//sites/default/files/Documents/exams/industryenterprise/industenterstudies05.pdf">Exam</a>')[0].url)
+    .toBe("https://www.vcaa.vic.edu.au/sites/default/files/Documents/exams/industryenterprise/industenterstudies05.pdf")
+})

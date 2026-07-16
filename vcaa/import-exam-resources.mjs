@@ -8,6 +8,7 @@ function text(value) {
 }
 
 function absoluteUrl(value) {
+  if (value.startsWith("//sites/")) return `${BASE}${value.slice(1)}`
   return new URL(value, BASE).href
 }
 
@@ -28,12 +29,15 @@ export function parseStudyResources(html) {
     if (!/\.(pdf|docx?|zip)(\?|$)/i.test(link.url) || !link.label) return []
     const label = link.label.replace(/\([^)]*\b(?:KB|MB)\b[^)]*\)/gi, "").trim()
     const lower = label.toLowerCase()
+    const urlLower = decodeURIComponent(link.url).toLowerCase()
     const kind = /specification/.test(lower) ? "specification"
-      : /report|assessment guide|criteria|expected qualities/.test(lower) ? "report"
+      : /report|assessment guide|criteria|expected qualities|\badvice\b/.test(lower) || /examrep|assessrep/.test(urlLower) ? "report"
       : /sample|answer book|answer sheet/.test(lower) ? "sample"
       : /exam|examination/.test(lower) ? "exam"
       : "other"
-    const year = Number(label.match(/\b(20\d{2})\b/)?.[1]) || null
+    const fullYear = label.match(/\b(20\d{2})\b/)?.[1] ?? link.url.match(/(?:^|\D)(20\d{2})(?:\D|$)/)?.[1]
+    const shortYear = link.url.match(/(?:rep|nov|_)(\d{2})(?:\D|$)/i)?.[1]
+    const year = Number(fullYear ?? (shortYear ? `20${shortYear}` : 0)) || null
     return [{ label, url: link.url, kind, year }]
   }).filter((link, index, all) => all.findIndex((item) => item.url === link.url) === index)
 }

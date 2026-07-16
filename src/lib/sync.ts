@@ -125,6 +125,8 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
     schemaVersion: 3,
     attempts: activeAttempts,
     mistakes: activeMistakes,
+    subjects: [],
+    subjectsUpdatedAt: "1970-01-01T00:00:00.000Z",
     trackedExamIds: [],
     trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
   })
@@ -139,18 +141,23 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
     syncCollection<ExamAttempt>("attempts", userId, data.attempts, attemptRows, tombstones.attempts),
     syncCollection<Mistake>("mistakes", userId, data.mistakes, mistakeRows, tombstones.mistakes),
   ])
-  const remoteState = stateResult.data?.payload as { trackedExamIds?: unknown } | undefined
+  const remoteState = stateResult.data?.payload as { trackedExamIds?: unknown; trackedExamIdsUpdatedAt?: unknown; subjects?: unknown; subjectsUpdatedAt?: unknown } | undefined
   const remoteIds = Array.isArray(remoteState?.trackedExamIds) && remoteState.trackedExamIds.every((id) => typeof id === "string") ? remoteState.trackedExamIds : []
-  const remoteUpdatedAt = stateResult.data?.updated_at ?? ""
+  const remoteUpdatedAt = typeof remoteState?.trackedExamIdsUpdatedAt === "string" ? remoteState.trackedExamIdsUpdatedAt : (stateResult.data?.updated_at ?? "")
   const { trackedExamIds, trackedExamIdsUpdatedAt } = mergeTrackedState(data.trackedExamIds, data.trackedExamIdsUpdatedAt, remoteIds, remoteUpdatedAt)
+  const remoteSubjects = Array.isArray(remoteState?.subjects) && remoteState.subjects.every((subject) => typeof subject === "string") ? remoteState.subjects : []
+  const remoteSubjectsUpdatedAt = typeof remoteState?.subjectsUpdatedAt === "string" ? remoteState.subjectsUpdatedAt : ""
+  const useRemoteSubjects = remoteSubjectsUpdatedAt > data.subjectsUpdatedAt
+  const subjects = useRemoteSubjects ? remoteSubjects : data.subjects
+  const subjectsUpdatedAt = useRemoteSubjects ? remoteSubjectsUpdatedAt : data.subjectsUpdatedAt
   const { error: stateError } = await supabase.from("user_state").upsert({
     user_id: userId,
-    payload: { trackedExamIds },
-    updated_at: trackedExamIdsUpdatedAt,
+    payload: { trackedExamIds, trackedExamIdsUpdatedAt, subjects, subjectsUpdatedAt },
+    updated_at: [trackedExamIdsUpdatedAt, subjectsUpdatedAt].toSorted().at(-1),
   }, { onConflict: "user_id" })
   if (stateError) throw stateError
   saveTombstones(tombstones)
-  return { ...data, attempts: attempts ?? data.attempts, mistakes: mistakes ?? data.mistakes, trackedExamIds, trackedExamIdsUpdatedAt }
+  return { ...data, attempts: attempts ?? data.attempts, mistakes: mistakes ?? data.mistakes, subjects, subjectsUpdatedAt, trackedExamIds, trackedExamIdsUpdatedAt }
 }
 
 export type SyncStatus = "unconfigured" | "signed-out" | "syncing" | "synced" | "error"

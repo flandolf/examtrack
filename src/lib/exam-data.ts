@@ -102,6 +102,8 @@ export type AppData = {
   schemaVersion: 3
   attempts: ExamAttempt[]
   mistakes: Mistake[]
+  subjects: string[]
+  subjectsUpdatedAt: string
   trackedExamIds: string[]
   trackedExamIdsUpdatedAt: string
 }
@@ -110,6 +112,8 @@ export const EMPTY_APP_DATA: AppData = {
   schemaVersion: 3,
   attempts: [],
   mistakes: [],
+  subjects: [],
+  subjectsUpdatedAt: "1970-01-01T00:00:00.000Z",
   trackedExamIds: [],
   trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
 }
@@ -580,10 +584,13 @@ export function isAppData(value: unknown): value is AppData {
   const trackedExamIdsValid =
     Array.isArray(data.trackedExamIds) &&
     data.trackedExamIds.every((value) => typeof value === "string")
+  const subjectsValid = Array.isArray(data.subjects) && data.subjects.every((value) => typeof value === "string")
   return (
     data.schemaVersion === 3 &&
     attemptsValid &&
     mistakesValid &&
+    subjectsValid &&
+    typeof data.subjectsUpdatedAt === "string" &&
     trackedExamIdsValid &&
     typeof data.trackedExamIdsUpdatedAt === "string"
   )
@@ -622,14 +629,22 @@ export function migrateAppData(value: unknown): AppData | null {
       schemaVersion: 3 as const,
       attempts: Array.isArray(data.attempts) ? data.attempts : [],
       mistakes: Array.isArray(data.mistakes) ? data.mistakes : [],
+      subjects: Array.isArray(data.subjects) ? data.subjects : [],
+      subjectsUpdatedAt: typeof data.subjectsUpdatedAt === "string" ? data.subjectsUpdatedAt : "1970-01-01T00:00:00.000Z",
       trackedExamIds: Array.isArray(data.trackedExamIds) ? data.trackedExamIds : [],
       trackedExamIdsUpdatedAt: typeof data.trackedExamIdsUpdatedAt === "string" ? data.trackedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
     }
     return isAppData(migrated) ? migrated : null
   }
   if (schemaVersion === 3) {
-    if (!Array.isArray(data.trackedExamIds) || typeof data.trackedExamIdsUpdatedAt !== "string") {
-      const migrated = { ...(data as Partial<AppData>), trackedExamIds: Array.isArray(data.trackedExamIds) ? data.trackedExamIds : [], trackedExamIdsUpdatedAt: typeof data.trackedExamIdsUpdatedAt === "string" ? data.trackedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z" }
+    if (!Array.isArray(data.trackedExamIds) || typeof data.trackedExamIdsUpdatedAt !== "string" || !Array.isArray(data.subjects) || typeof data.subjectsUpdatedAt !== "string") {
+      const migrated = {
+        ...(data as Partial<AppData>),
+        subjects: Array.isArray(data.subjects) ? data.subjects : [],
+        subjectsUpdatedAt: typeof data.subjectsUpdatedAt === "string" ? data.subjectsUpdatedAt : "1970-01-01T00:00:00.000Z",
+        trackedExamIds: Array.isArray(data.trackedExamIds) ? data.trackedExamIds : [],
+        trackedExamIdsUpdatedAt: typeof data.trackedExamIdsUpdatedAt === "string" ? data.trackedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
+      }
       return isAppData(migrated) ? migrated : null
     }
     return isAppData(data) ? data : null

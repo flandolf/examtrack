@@ -546,7 +546,7 @@ export function Dashboard(props: DashboardProps) {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 lg:col-span-2">
           <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <PerformanceTrendChart attempts={data.attempts} references={references} />
+            <PerformanceTrendChart attempts={data.attempts} references={references} preferredSubjects={data.subjects} />
           </Suspense>
         </div>
         <div className="min-w-0">
@@ -559,7 +559,7 @@ export function Dashboard(props: DashboardProps) {
           <SubjectBenchmarkChart attempts={data.attempts} references={references} mistakes={data.mistakes} />
         </Suspense>
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
-          <VcaaPercentileTrendChart attempts={data.attempts} references={references} />
+          <VcaaPercentileTrendChart attempts={data.attempts} references={references} preferredSubjects={data.subjects} />
         </Suspense>
       </div>
 

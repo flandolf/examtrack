@@ -3,8 +3,9 @@ import { CartesianGrid, Dot, Line, LineChart, ReferenceLine, XAxis, YAxis } from
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SubjectCombobox } from "@/components/subject-combobox"
 import { buildAttemptBenchmarks, type AssessmentReference, type ExamAttempt } from "@/lib/exam-data"
+import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
 
 const chartConfig = {
   percentile: { label: "Estimated percentile", color: "#16a34a" },
@@ -17,16 +18,18 @@ function formatTick(value: number) {
 export function VcaaPercentileTrendChart({
   attempts,
   references,
+  preferredSubjects,
 }: {
   attempts: ExamAttempt[]
   references: AssessmentReference[]
+  preferredSubjects: string[]
 }) {
   const filterId = useId()
   const subjects = useMemo(
-    () => [...new Set(attempts.map((attempt) => attempt.subject))].toSorted(),
-    [attempts],
+    () => prioritiseSubjects(attempts.map((attempt) => attempt.subject), preferredSubjects),
+    [attempts, preferredSubjects],
   )
-  const [subjectFilter, setSubjectFilter] = useState("all")
+  const [subjectFilter, setSubjectFilter] = useState(() => firstPreferredSubject(subjects, preferredSubjects) || "all")
   useEffect(() => {
     if (subjectFilter !== "all" && !subjects.includes(subjectFilter)) setSubjectFilter("all")
   }, [subjectFilter, subjects])
@@ -57,15 +60,7 @@ export function VcaaPercentileTrendChart({
           {subjects.length > 1 ? (
             <div className="flex items-center gap-2">
               <label htmlFor={`percentile-subject-${filterId}`} className="text-sm text-muted-foreground">Subject</label>
-              <Select value={subjectFilter} onValueChange={(value) => setSubjectFilter(value ?? "all")}>
-                <SelectTrigger id={`percentile-subject-${filterId}`} className="h-8 w-44">
-                  <SelectValue>{subjectFilter === "all" ? "All subjects" : subjectFilter}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All subjects</SelectItem>
-                  {subjects.map((subject) => <SelectItem key={subject} value={subject}>{subject}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SubjectCombobox subjects={subjects} preferredSubjects={preferredSubjects} value={subjectFilter} onValueChange={setSubjectFilter} includeAll id={`percentile-subject-${filterId}`} className="h-8 w-44" />
             </div>
           ) : null}
         </div>

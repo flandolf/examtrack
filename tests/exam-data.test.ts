@@ -143,6 +143,8 @@ describe("exam analysis", () => {
       schemaVersion: 3 as const,
       attempts: [attempt],
       mistakes: [],
+      subjects: [],
+      subjectsUpdatedAt: "1970-01-01T00:00:00.000Z",
       trackedExamIds: [],
       trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
     }
@@ -195,7 +197,7 @@ describe("exam analysis", () => {
       createdAt: attempt.createdAt,
       updatedAt: attempt.updatedAt,
     }
-    const data = { schemaVersion: 3 as const, attempts: [attempt], mistakes: [mistake], trackedExamIds: [], trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z" }
+    const data = { schemaVersion: 3 as const, attempts: [attempt], mistakes: [mistake], subjects: [], subjectsUpdatedAt: "1970-01-01T00:00:00.000Z", trackedExamIds: [], trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z" }
 
     expect(isAppData(data)).toBe(true)
     expect(isAppData({ ...data, mistakes: [{ ...mistake, questionText: "Differentiate $e^{2x}$." }] })).toBe(true)

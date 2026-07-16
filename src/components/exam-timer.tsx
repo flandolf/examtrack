@@ -3,14 +3,7 @@ import { Check, Clock3, Pause, Play, RotateCcw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox"
+import { SubjectCombobox } from "@/components/subject-combobox"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +21,7 @@ import { QuestionResultsEditor } from "@/components/question-results-editor"
 import { useTickingNow } from "@/hooks/use-ticking-now"
 import { formatExamTitle, formatReferenceName, validateAttempt, validateQuestionResults, type AssessmentReference, type ExamAttempt, type QuestionResult } from "@/lib/exam-data"
 import { formatTimer, getExamTimerState } from "@/lib/exam-timer"
+import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
 
 type TimerSession = {
   subject: string
@@ -47,6 +41,7 @@ export type ExamTimerPreset = Pick<TimerSession, "subject" | "provider" | "examY
 
 type ExamTimerProps = {
   references: AssessmentReference[]
+  preferredSubjects: string[]
   initialExam?: ExamTimerPreset | null
   onSave: (attempt: ExamAttempt) => void
 }
@@ -70,9 +65,9 @@ function loadSession(): TimerSession | null {
   }
 }
 
-export function ExamTimer({ references, initialExam, onSave }: ExamTimerProps) {
+export function ExamTimer({ references, preferredSubjects, initialExam, onSave }: ExamTimerProps) {
   const [session, setSession] = useState<TimerSession | null>(loadSession)
-  const [subject, setSubject] = useState(initialExam?.subject ?? "")
+  const [subject, setSubject] = useState(initialExam?.subject ?? firstPreferredSubject(references.map((item) => item.studyName), preferredSubjects))
   const [provider, setProvider] = useState(initialExam?.provider ?? "VCAA")
   const [examYear, setExamYear] = useState(initialExam?.examYear ?? new Date().getFullYear())
   const [paper, setPaper] = useState(initialExam?.paper ?? "")
@@ -88,7 +83,7 @@ export function ExamTimer({ references, initialExam, onSave }: ExamTimerProps) {
   const [questionResults, setQuestionResults] = useState<QuestionResult[]>([])
   const now = useTickingNow(250)
 
-  const subjects = useMemo(() => [...new Set(references.map((item) => item.studyName))].toSorted(), [references])
+  const subjects = useMemo(() => prioritiseSubjects(references.map((item) => item.studyName), preferredSubjects), [preferredSubjects, references])
   const paperOptions = useMemo(
     () => [...new Set(references
       .filter((item) => item.studyName.toLowerCase() === subject.trim().toLowerCase())
@@ -206,13 +201,7 @@ export function ExamTimer({ references, initialExam, onSave }: ExamTimerProps) {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="timer-subject">Subject</FieldLabel>
-                    <Combobox value={subject} inputValue={subject} onValueChange={(value) => setSubject(value ?? "")} onInputValueChange={setSubject}>
-                      <ComboboxInput id="timer-subject" placeholder="Search or enter a subject" showClear required />
-                      <ComboboxContent>
-                        <ComboboxEmpty>No subject found.</ComboboxEmpty>
-                        <ComboboxList>{subjects.map((item) => <ComboboxItem key={item} value={item}>{item}</ComboboxItem>)}</ComboboxList>
-                      </ComboboxContent>
-                    </Combobox>
+                    <SubjectCombobox subjects={subjects} preferredSubjects={preferredSubjects} value={subject} onValueChange={setSubject} id="timer-subject" allowCustom required placeholder="Search or enter a subject" />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="timer-provider">Provider</FieldLabel>

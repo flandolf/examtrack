@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
 import { createChatGPTProxyProvider } from "@opencoredev/loginwithchatgpt-ai"
 import { useLoginWithChatGPT } from "@opencoredev/loginwithchatgpt-react"
-import { CheckCircle2, Cloud, Copy, ExternalLink, LogOut, RefreshCw, Sparkles } from "lucide-react"
+import { ArrowDown, ArrowUp, CheckCircle2, Cloud, Copy, ExternalLink, LogOut, RefreshCw, Sparkles, X } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
+import { SubjectCombobox } from "@/components/subject-combobox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,7 +28,12 @@ const REASONING_LABELS: Record<ReasoningEffort, string> = {
   xhigh: "Extra high",
 }
 
-export function SettingsPage({ sync }: { sync: ReturnType<typeof useSupabaseSync> }) {
+export function SettingsPage({ sync, subjects, selectedSubjects, onSubjectsChange }: {
+  sync: ReturnType<typeof useSupabaseSync>
+  subjects: string[]
+  selectedSubjects: string[]
+  onSubjectsChange: (subjects: string[]) => void
+}) {
   const auth = useLoginWithChatGPT()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -37,6 +43,7 @@ export function SettingsPage({ sync }: { sync: ReturnType<typeof useSupabaseSync
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
   const [modelError, setModelError] = useState<string | null>(null)
+  const [subjectToAdd, setSubjectToAdd] = useState("")
 
   function update(next: AISettings) {
     setSettings(next)
@@ -66,6 +73,48 @@ export function SettingsPage({ sync }: { sync: ReturnType<typeof useSupabaseSync
   return (
     <div className="grid gap-6">
       <PageHeader title="Settings" description="Manage sync, the ChatGPT connection, and mistake analysis." />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>My subjects</CardTitle>
+          <CardDescription>Your first subject is the default. Selected subjects appear first and bold in subject searches.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <SubjectCombobox
+            subjects={subjects.filter((subject) => !selectedSubjects.includes(subject))}
+            preferredSubjects={[]}
+            value={subjectToAdd}
+            onValueChange={(subject) => {
+              if (!subject) return
+              onSubjectsChange([...selectedSubjects, subject])
+              setSubjectToAdd("")
+            }}
+            className="w-full max-w-md"
+            placeholder="Search and add a subject"
+          />
+          {selectedSubjects.length ? (
+            <ol className="grid max-w-xl gap-2">
+              {selectedSubjects.map((subject, index) => (
+                <li key={subject} className="flex items-center gap-2 rounded-lg border px-3 py-2">
+                  <span className="w-6 text-sm tabular-nums text-muted-foreground">{index + 1}</span>
+                  <strong className="min-w-0 flex-1 truncate text-sm">{subject}</strong>
+                  <Button type="button" variant="ghost" size="icon-sm" aria-label={`Move ${subject} up`} disabled={index === 0} onClick={() => {
+                    const next = [...selectedSubjects]
+                    ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
+                    onSubjectsChange(next)
+                  }}><ArrowUp /></Button>
+                  <Button type="button" variant="ghost" size="icon-sm" aria-label={`Move ${subject} down`} disabled={index === selectedSubjects.length - 1} onClick={() => {
+                    const next = [...selectedSubjects]
+                    ;[next[index], next[index + 1]] = [next[index + 1], next[index]]
+                    onSubjectsChange(next)
+                  }}><ArrowDown /></Button>
+                  <Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove ${subject}`} onClick={() => onSubjectsChange(selectedSubjects.filter((item) => item !== subject))}><X /></Button>
+                </li>
+              ))}
+            </ol>
+          ) : <p className="text-sm text-muted-foreground">Add your subjects in priority order.</p>}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

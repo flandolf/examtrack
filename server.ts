@@ -1,5 +1,6 @@
 import { resolve, sep } from "node:path"
 import { createChatGPTAuth } from "./server/chatgpt"
+import { handleMistakesPdf } from "./server/mistakes-pdf"
 
 const dist = resolve(import.meta.dir, "dist")
 const chatgptAuth = createChatGPTAuth()
@@ -9,6 +10,7 @@ const server = Bun.serve({
   async fetch(request) {
     const url = new URL(request.url)
     if (url.pathname.startsWith("/api/chatgpt/")) return chatgptAuth.handler(request)
+    if (url.pathname === "/api/mistakes-pdf") return handleMistakesPdf(request)
 
     const path = resolve(dist, `.${url.pathname}`)
     if (path !== dist && !path.startsWith(`${dist}${sep}`)) return new Response("Bad request", { status: 400 })

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { mergeCollection, mergeTrackedState } from "../src/lib/sync"
+import { mergeCollection, mergeMistakeInsights, mergeTrackedState } from "../src/lib/sync"
 
 type Item = { id: string; updatedAt: string; value: string }
 
@@ -49,5 +49,14 @@ describe("sync merge", () => {
   test("keeps the newest tracked-exam state across devices", () => {
     expect(mergeTrackedState(["local"], "2026-07-15T01:00:00.000Z", ["remote"], "2026-07-15T02:00:00.000Z"))
       .toEqual({ trackedExamIds: ["remote"], trackedExamIdsUpdatedAt: "2026-07-15T02:00:00.000Z" })
+  })
+
+  test("keeps the newest saved mistake insights", () => {
+    const older = { summary: "Old", biggestErrors: [], otherInsights: [], nextStep: "Old", generatedAt: "2026-07-15T01:00:00.000Z" }
+    const newer = { ...older, summary: "New", generatedAt: "2026-07-15T02:00:00.000Z" }
+    expect(mergeMistakeInsights(older, newer)).toEqual(newer)
+    expect(mergeMistakeInsights(newer, older)).toEqual(newer)
+    const withQuestions = { ...older, practiceQuestions: "Questions", questionsGeneratedAt: "2026-07-15T03:00:00.000Z" }
+    expect(mergeMistakeInsights(newer, withQuestions)).toEqual(withQuestions)
   })
 })

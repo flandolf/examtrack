@@ -23,7 +23,7 @@ type ExamSheetProps = {
   comparisonYear: number
   initialAttempt?: ExamAttempt | null
   onOpenChange: (open: boolean) => void
-  onSave: (attempt: ExamAttempt) => void
+  onSave: (attempt: ExamAttempt, logMistake: boolean) => void
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -68,6 +68,7 @@ export function ExamSheet({ open, references, preferredSubjects, comparisonYear,
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const logMistake = new FormData(event.currentTarget).get("next") === "mistake"
     const scoreError = validateAttempt({ rawScore, rawMax })
     if (!subject.trim() || !paper.trim()) {
       setError("Subject and paper are required.")
@@ -97,7 +98,7 @@ export function ExamSheet({ open, references, preferredSubjects, comparisonYear,
       referenceId: null,
       createdAt: initialAttempt?.createdAt ?? timestamp,
       updatedAt: timestamp,
-    })
+    }, logMistake)
     reset()
     onOpenChange(false)
   }
@@ -165,6 +166,7 @@ export function ExamSheet({ open, references, preferredSubjects, comparisonYear,
           </FieldGroup>
         </form>
         <SheetFooter>
+          <Button type="submit" name="next" value="mistake" form="exam-form" variant="outline">Save & log mistake</Button>
           <Button type="submit" form="exam-form">{initialAttempt ? "Save changes" : "Save exam"}</Button>
         </SheetFooter>
       </SheetContent>

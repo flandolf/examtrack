@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react"
 import type { User } from "@supabase/supabase-js"
-import { EMPTY_APP_DATA, migrateAppData, type AppData, type ExamAttempt, type Mistake } from "@/lib/exam-data"
+import { EMPTY_APP_DATA, migrateAppData, type AppData, type ExamAttempt, type Mistake, type MistakeInsights } from "@/lib/exam-data"
 import { supabase } from "@/lib/supabase"
 
 const TOMBSTONE_KEY = "examtrack:sync:tombstones:v1"
@@ -76,6 +76,11 @@ export function mergeTrackedState(
     : { trackedExamIds: localIds, trackedExamIdsUpdatedAt: localUpdatedAt }
 }
 
+export function mergeMistakeInsights(local?: MistakeInsights, remote?: MistakeInsights) {
+  const updatedAt = (insights?: MistakeInsights) => insights?.questionsGeneratedAt ?? insights?.generatedAt ?? ""
+  return remote && updatedAt(remote) > updatedAt(local) ? remote : local
+}
+
 async function syncCollection<T extends { id: string; updatedAt: string }>(
   collection: Collection,
   userId: string,
@@ -143,7 +148,7 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
     syncCollection<ExamAttempt>("attempts", userId, data.attempts, attemptRows, tombstones.attempts),
     syncCollection<Mistake>("mistakes", userId, data.mistakes, mistakeRows, tombstones.mistakes),
   ])
-  const remoteState = stateResult.data?.payload as { trackedExamIds?: unknown; trackedExamIdsUpdatedAt?: unknown; completedExamIds?: unknown; completedExamIdsUpdatedAt?: unknown; subjects?: unknown; subjectsUpdatedAt?: unknown } | undefined
+  const remoteState = stateResult.data?.payload as { trackedExamIds?: unknown; trackedExamIdsUpdatedAt?: unknown; completedExamIds?: unknown; completedExamIdsUpdatedAt?: unknown; subjects?: unknown; subjectsUpdatedAt?: unknown; mistakeInsights?: unknown } | undefined
   const remoteIds = Array.isArray(remoteState?.trackedExamIds) && remoteState.trackedExamIds.every((id) => typeof id === "string") ? remoteState.trackedExamIds : []
   const remoteUpdatedAt = typeof remoteState?.trackedExamIdsUpdatedAt === "string" ? remoteState.trackedExamIdsUpdatedAt : (stateResult.data?.updated_at ?? "")
   const { trackedExamIds, trackedExamIdsUpdatedAt } = mergeTrackedState(data.trackedExamIds, data.trackedExamIdsUpdatedAt, remoteIds, remoteUpdatedAt)
@@ -157,14 +162,16 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
   const useRemoteSubjects = remoteSubjectsUpdatedAt > data.subjectsUpdatedAt
   const subjects = useRemoteSubjects ? remoteSubjects : data.subjects
   const subjectsUpdatedAt = useRemoteSubjects ? remoteSubjectsUpdatedAt : data.subjectsUpdatedAt
+  const remoteInsights = migrateAppData({ ...EMPTY_APP_DATA, mistakeInsights: remoteState?.mistakeInsights })?.mistakeInsights
+  const mistakeInsights = mergeMistakeInsights(data.mistakeInsights, remoteInsights)
   const { error: stateError } = await supabase.from("user_state").upsert({
     user_id: userId,
-    payload: { trackedExamIds, trackedExamIdsUpdatedAt, completedExamIds, completedExamIdsUpdatedAt, subjects, subjectsUpdatedAt },
-    updated_at: [trackedExamIdsUpdatedAt, completedExamIdsUpdatedAt, subjectsUpdatedAt].toSorted().at(-1),
+    payload: { trackedExamIds, trackedExamIdsUpdatedAt, completedExamIds, completedExamIdsUpdatedAt, subjects, subjectsUpdatedAt, mistakeInsights },
+    updated_at: [trackedExamIdsUpdatedAt, completedExamIdsUpdatedAt, subjectsUpdatedAt, mistakeInsights?.questionsGeneratedAt ?? mistakeInsights?.generatedAt ?? ""].toSorted().at(-1),
   }, { onConflict: "user_id" })
   if (stateError) throw stateError
   saveTombstones(tombstones)
-  return { ...data, attempts: attempts ?? data.attempts, mistakes: mistakes ?? data.mistakes, subjects, subjectsUpdatedAt, trackedExamIds, trackedExamIdsUpdatedAt, completedExamIds, completedExamIdsUpdatedAt }
+  return { ...data, attempts: attempts ?? data.attempts, mistakes: mistakes ?? data.mistakes, subjects, subjectsUpdatedAt, trackedExamIds, trackedExamIdsUpdatedAt, completedExamIds, completedExamIdsUpdatedAt, mistakeInsights }
 }
 
 export type SyncStatus = "unconfigured" | "signed-out" | "syncing" | "synced" | "error"

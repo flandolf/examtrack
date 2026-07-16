@@ -98,6 +98,22 @@ export type Mistake = {
   updatedAt: string
 }
 
+export type MistakeInsight = {
+  title: string
+  evidence: string
+  action: string
+}
+
+export type MistakeInsights = {
+  summary: string
+  biggestErrors: MistakeInsight[]
+  otherInsights: string[]
+  nextStep: string
+  practiceQuestions?: string
+  generatedAt: string
+  questionsGeneratedAt?: string
+}
+
 export type AppData = {
   schemaVersion: 3
   attempts: ExamAttempt[]
@@ -108,6 +124,7 @@ export type AppData = {
   trackedExamIdsUpdatedAt: string
   completedExamIds: string[]
   completedExamIdsUpdatedAt: string
+  mistakeInsights?: MistakeInsights
 }
 
 export const EMPTY_APP_DATA: AppData = {
@@ -601,8 +618,20 @@ export function isAppData(value: unknown): value is AppData {
     trackedExamIdsValid &&
     typeof data.trackedExamIdsUpdatedAt === "string" &&
     completedExamIdsValid &&
-    typeof data.completedExamIdsUpdatedAt === "string"
+    typeof data.completedExamIdsUpdatedAt === "string" &&
+    (data.mistakeInsights === undefined || isMistakeInsights(data.mistakeInsights))
   )
+}
+
+function isMistakeInsights(value: unknown): value is MistakeInsights {
+  if (!isRecord(value)) return false
+  return typeof value.summary === "string" &&
+    Array.isArray(value.biggestErrors) && value.biggestErrors.every((error) => isRecord(error) && typeof error.title === "string" && typeof error.evidence === "string" && typeof error.action === "string") &&
+    Array.isArray(value.otherInsights) && value.otherInsights.every((insight) => typeof insight === "string") &&
+    typeof value.nextStep === "string" &&
+    (value.practiceQuestions === undefined || typeof value.practiceQuestions === "string") &&
+    typeof value.generatedAt === "string" &&
+    (value.questionsGeneratedAt === undefined || typeof value.questionsGeneratedAt === "string")
 }
 
 function isQuestionResult(value: unknown): value is QuestionResult {

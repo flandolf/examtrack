@@ -4,6 +4,7 @@ import {
   Clock3,
   Calculator,
   Download,
+  FileDown,
   GraduationCap,
   LibraryBig,
   BookOpenText,
@@ -61,6 +62,7 @@ import {
 } from "@/lib/exam-data"
 import { downloadAppData, loadAppData, parseAppDataFile, saveAppData } from "@/lib/storage"
 import { buildRevisionPriorities, buildRevisionQueue } from "@/lib/mistake-review"
+import { downloadMistakesPdf } from "@/lib/mistake-pdf"
 import { useSupabaseSync } from "@/lib/sync"
 import { loadTimetable, suggestTimetableForAttempt, formatExamLabel, type Timetable } from "@/lib/timetable"
 import type { ScalingReference } from "@/lib/scaling"
@@ -91,6 +93,9 @@ const SettingsPage = lazy(() =>
 )
 const StudyScorePredictor = lazy(() =>
   import("@/components/study-score-predictor").then((module) => ({ default: module.StudyScorePredictor })),
+)
+const MistakeInsights = lazy(() =>
+  import("@/components/mistake-insights").then((module) => ({ default: module.MistakeInsights })),
 )
 const ExamLibrary = lazy(() =>
   import("@/components/exam-library").then((module) => ({ default: module.ExamLibrary })),
@@ -184,7 +189,7 @@ function MistakeList({ mistakes, attempts, mastered, onEdit, onReview, onDelete 
               <Suspense fallback={<Skeleton className="h-24 w-full" />}>
                 {mistake.questionText ? <div><p className="mb-2 text-sm font-medium">Question</p><MarkdownPreview>{mistake.questionText}</MarkdownPreview></div> : null}
                 {mistake.totalMarks !== undefined && mistake.marksLost !== undefined ? <p className="text-sm text-muted-foreground">{mistake.marksLost}/{mistake.totalMarks} marks lost</p> : null}
-                <p className="text-xs text-muted-foreground">{mistake.reviewHistory?.length ?? 0} review{mistake.reviewHistory?.length === 1 ? "" : "s"}{mistake.dueAt ? ` · next review ${new Date(mistake.dueAt).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}` : mistake.resolved ? " · mastered" : " · due now"}{mistake.criterion ? ` · ${mistake.criterion}` : ""}</p>
+                <p className="text-xs text-muted-foreground">{mistake.reviewHistory?.length ?? 0} review{mistake.reviewHistory?.length === 1 ? "" : "s"}{mistake.dueAt ? ` · next review ${new Date(mistake.dueAt).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}` : mistake.resolved ? " · mastered" : " · due now"}{mistake.criterion ? <> · <MarkdownPreview inline>{mistake.criterion}</MarkdownPreview></> : null}</p>
                 <details className="group rounded-lg border">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-medium select-none">Reveal diagnosis and corrected method</summary>
                   <div className="grid gap-4 border-t p-3">
@@ -210,8 +215,9 @@ function MistakeList({ mistakes, attempts, mastered, onEdit, onReview, onDelete 
   )
 }
 
-function MistakesPage({ data, onLog, onEdit, onReview, onDelete }: { data: AppData; onLog: () => void; onEdit: (mistake: Mistake) => void; onReview: (mistake: Mistake, result: ReviewResult) => void; onDelete: (mistake: Mistake) => void }) {
+function MistakesPage({ data, onLog, onEdit, onReview, onDelete, onSaveInsights }: { data: AppData; onLog: () => void; onEdit: (mistake: Mistake) => void; onReview: (mistake: Mistake, result: ReviewResult) => void; onDelete: (mistake: Mistake) => void; onSaveInsights: (insights: NonNullable<AppData["mistakeInsights"]>) => void }) {
   const [subject, setSubject] = useState("all")
+  const [exporting, setExporting] = useState(false)
   const attemptSubjects = useMemo(() => new Map(data.attempts.map((attempt) => [attempt.id, attempt.subject])), [data.attempts])
   const subjects = useMemo(() => [...new Set(data.attempts.map((attempt) => attempt.subject))].toSorted(), [data.attempts])
   const activeSubject = subject === "all" || subjects.includes(subject) ? subject : "all"
@@ -221,11 +227,24 @@ function MistakesPage({ data, onLog, onEdit, onReview, onDelete }: { data: AppDa
   const resolved = visibleMistakes.filter((mistake) => mistake.resolved).toSorted((first, second) => second.updatedAt.localeCompare(first.updatedAt))
   const topPriority = buildRevisionPriorities(visibleMistakes).find((item) => item.unresolved > 0)
   const completion = visibleMistakes.length ? (resolved.length / visibleMistakes.length) * 100 : 0
+  async function exportWorksheet() {
+    setExporting(true)
+    try {
+      await downloadMistakesPdf(unresolved, data.attempts, activeSubject === "all" ? "mistakes" : activeSubject)
+      toast.success("Worksheet downloaded")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not export worksheet.")
+    } finally {
+      setExporting(false)
+    }
+  }
   return (
     <div className="grid gap-6">
       <PageHeader title="Mistakes" description="Redo each question before revealing the correction, then mark it mastered only when you can solve it unaided.">
+        <Button variant="outline" onClick={() => void exportWorksheet()} disabled={!unresolved.length || exporting}><FileDown />{exporting ? "Creating PDF..." : "Export worksheet"}</Button>
         <Button onClick={onLog} disabled={!data.attempts.length}><Plus />Log mistake</Button>
       </PageHeader>
+      <Suspense fallback={<Skeleton className="h-40 w-full" />}><MistakeInsights data={data} onSave={onSaveInsights} /></Suspense>
       {data.mistakes.length ? (
         <div className="flex flex-wrap items-center gap-3">
           <Progress value={completion} className="w-48" />
@@ -331,7 +350,7 @@ export default function App() {
     }
   }, [])
 
-  function saveAttempt(attempt: ExamAttempt) {
+  function saveAttempt(attempt: ExamAttempt, logMistake = false) {
     const isNew = !editingAttempt
     setData((current) => ({
       ...current,
@@ -339,6 +358,11 @@ export default function App() {
         ? [...current.attempts, attempt]
         : current.attempts.map((item) => item.id === attempt.id ? attempt : item),
     }))
+    if (logMistake) {
+      setEditingMistake(null)
+      setMistakeAttemptId(attempt.id)
+      setMistakeOpen(true)
+    }
 
     if (!isNew) {
       toast.success("Exam updated")
@@ -520,7 +544,7 @@ export default function App() {
               />
             </Suspense>
           ) : null}
-          {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onReview={reviewMistake} onDelete={deleteMistake} /> : null}
+          {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onReview={reviewMistake} onDelete={deleteMistake} onSaveInsights={(mistakeInsights) => setData((current) => ({ ...current, mistakeInsights }))} /> : null}
           {view === "library" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamLibrary references={references} studies={resourceStudies} attempts={data.attempts} completedExamIds={data.completedExamIds} generatedAt={resourcesGeneratedAt ?? referencesGeneratedAt} preferredSubjects={data.subjects} onToggleCompleted={toggleCompletedExam} onStart={(preset) => { setTimerPreset(preset); setView("timer") }} /></Suspense> : null}
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer key={timerPreset ? `${timerPreset.subject}-${timerPreset.examYear}-${timerPreset.paper}` : "manual"} references={references} preferredSubjects={data.subjects} initialExam={timerPreset} onSave={(attempt) => { setTimerPreset(null); saveTimedAttempt(attempt) }} /></Suspense> : null}
           {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} scalingReferences={scalingReferences} /></Suspense> : null}

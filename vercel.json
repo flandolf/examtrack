@@ -6,6 +6,9 @@
   "functions": {
     "api/chatgpt.ts": {
       "maxDuration": 60
+    },
+    "api/mistakes-pdf.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

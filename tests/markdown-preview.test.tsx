@@ -20,3 +20,9 @@ test("renders LaTeX parenthesis and bracket delimiters", () => {
   expect(markup).not.toContain("\\(f(x)")
   expect(markup).not.toContain("\\[x^2")
 })
+
+test("renders inline assessment criteria without the preview card", () => {
+  const markup = renderToStaticMarkup(<MarkdownPreview inline>{"Use $x^2$ correctly."}</MarkdownPreview>)
+  expect(markup).toContain("katex")
+  expect(markup).not.toContain("rounded-lg")
+})

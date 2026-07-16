@@ -6,7 +6,7 @@ import {
   predictScaledStudyScore,
   type ScalingReference,
 } from "../src/lib/scaling"
-import { parseScalingReportText, REPORTS } from "../vtac/import-scaling-reports.mjs"
+import { extractPageText, parseScalingReportText, REPORTS } from "../vtac/import-scaling-reports.mjs"
 
 const points = [20, 25, 30, 35, 40, 45, 50].map((rawScore, index) => ({
   rawScore,
@@ -42,6 +42,41 @@ describe("VTAC scaling", () => {
         rawScore,
         scaledScore: [24, 30, 36, 41, 45, 48, 50][index],
       })),
+    })])
+  })
+
+  test("recovers rows when a PDF page has collapsed coordinates", () => {
+    const text = extractPageText([
+      {
+        str: "LA Latin 45.0 6.5 35 41 46 50 52 54 55",
+        transform: [1, 0, 0, 1, 10, 100],
+        hasEOL: true,
+      },
+      {
+        str: "MA Macedonian 32.4 6.7 23 28 32 36 40 45 50",
+        transform: [1, 0, 0, 1, 10, 100],
+        hasEOL: true,
+      },
+    ])
+    const references = parseScalingReportText({
+      year: 2018,
+      url: "https://example.test/scaling-2018.pdf",
+      text,
+    })
+    expect(references.map((reference) => reference.code)).toEqual(["LA", "MA"])
+  })
+
+  test("accepts an appended page footer and removes duplicate rows", () => {
+    const row = "KS Korean Second Language 38.4 6.8 27 33 39 43 47 50 52 14 December 2018 2 of 3"
+    const references = parseScalingReportText({
+      year: 2018,
+      url: "https://example.test/scaling-2018.pdf",
+      text: `${row}\n${row}`,
+    })
+    expect(references).toEqual([expect.objectContaining({
+      code: "KS",
+      studyName: "Korean Second Language",
+      points: expect.arrayContaining([{ rawScore: 50, scaledScore: 52 }]),
     })])
   })
 

@@ -12,8 +12,8 @@ import { PageHeader } from "@/components/page-header"
 import { SubjectCombobox } from "@/components/subject-combobox"
 import type { AppData, AssessmentReference } from "@/lib/exam-data"
 import { defaultExamWeight, predictStudyScore } from "@/lib/study-score"
-import { predictScaledStudyScore, type ScalingReference } from "@/lib/scaling"
 import { prioritiseSubjects } from "@/lib/subjects"
+import { normaliseScalingStudyName, predictScaledStudyScore, type ScalingReference } from "@/lib/scaling"
 
 function usesMethodsWeighting(subject: string) {
   return /mathematical methods|specialist mathematics/i.test(subject)
@@ -60,7 +60,7 @@ export function StudyScorePredictor({
   )
   const scalingYears = useMemo(
     () => [...new Set(scalingReferences
-      .filter((reference) => reference.studyName.toLowerCase() === subject.toLowerCase())
+      .filter((reference) => normaliseScalingStudyName(reference.studyName) === normaliseScalingStudyName(subject))
       .map((reference) => reference.year))].toSorted((first, second) => second - first),
     [scalingReferences, subject],
   )

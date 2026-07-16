@@ -27,6 +27,25 @@ export type ScaledStudyScorePrediction = {
   }>
 }
 
+const SCALING_STUDY_ALIASES = new Map([
+  ["english eal", "english as an additional language"],
+  ["english esl", "english as an additional language"],
+  ["english sl", "english"],
+  ["further mathematics", "general mathematics"],
+  ["mathematical methods cas", "mathematical methods"],
+])
+
+export function normaliseScalingStudyName(value: string): string {
+  const original = normaliseComparisonName(value)
+  const name = original
+    .replace(/\bfl\b/g, "first language")
+    .replace(/\bsl advanced\b/g, "second language advanced")
+    .replace(/\bsl\b/g, "second language")
+    .replace(/\s+/g, " ")
+    .trim()
+  return SCALING_STUDY_ALIASES.get(original) ?? name
+}
+
 export function interpolateScaledScore(rawScore: number, points: ScalingPoint[]): number | null {
   if (!Number.isFinite(rawScore) || rawScore < 20 || rawScore > 50 || points.length < 2) return null
   const ordered = points.toSorted((first, second) => first.rawScore - second.rawScore)
@@ -46,10 +65,10 @@ export function predictScaledStudyScore(
   references: ScalingReference[],
   year?: number | null,
 ): ScaledStudyScorePrediction | null {
-  const subjectKey = normaliseComparisonName(subject)
+  const subjectKey = normaliseScalingStudyName(subject)
   const yearEstimates = references
     .filter((reference) =>
-      normaliseComparisonName(reference.studyName) === subjectKey &&
+      normaliseScalingStudyName(reference.studyName) === subjectKey &&
       (year == null || reference.year === year),
     )
     .flatMap((reference) => {

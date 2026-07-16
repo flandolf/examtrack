@@ -117,14 +117,15 @@ describe("VTAC scaling", () => {
     })
   })
 
-  test("bundles valid and unique 2021–2025 scaling references", () => {
+  test("bundles valid and unique 2012–2025 scaling references", () => {
     const data = JSON.parse(readFileSync(new URL("../public/vtac-scaling-reports.json", import.meta.url), "utf8")) as {
       references: ScalingReference[]
     }
-    expect(data.references.length).toBeGreaterThan(400)
+    const expectedYears = REPORTS.map((report) => report.year).toSorted()
+    expect(data.references.length).toBeGreaterThanOrEqual(REPORTS.length * 50)
     expect(new Set(data.references.map((reference) => reference.id)).size).toBe(data.references.length)
-    expect([...new Set(data.references.map((reference) => reference.year))].toSorted()).toEqual([2021, 2022, 2023, 2024, 2025])
-    expect(data.references.filter((reference) => reference.studyName === "Mathematical Methods")).toHaveLength(5)
+    expect([...new Set(data.references.map((reference) => reference.year))].toSorted()).toEqual(expectedYears)
+    expect(data.references.filter((reference) => normaliseScalingStudyName(reference.studyName) === "mathematical methods")).toHaveLength(REPORTS.length)
     expect(data.references.every((reference) => reference.points.length === 7)).toBe(true)
   })
 })

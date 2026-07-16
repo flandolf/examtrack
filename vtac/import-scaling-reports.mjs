@@ -2,17 +2,33 @@ import { writeFileSync } from "node:fs"
 import { resolve, sep } from "node:path"
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs"
 
-const REPORTS = [
+const CURRENT_REPORTS = [
   { year: 2025, url: "https://vtac.edu.au/files/pdf/reports/scaling-report-25.pdf" },
   { year: 2024, url: "https://vtac.edu.au/files/pdf/reports/scaling-report-24.pdf" },
   { year: 2023, url: "https://vtac.edu.au/files/pdf/reports/scaling-report-23-24.pdf" },
   { year: 2022, url: "https://vtac.edu.au/files/pdf/reports/scaling-report-22-23.pdf" },
   { year: 2021, url: "https://vtac.edu.au/files/pdf/reports/scaling-report-21-22.pdf" },
 ]
+const ARCHIVE_REPORTS = [
+  { year: 2020, url: "https://vtac.edu.au/files/pdf/reports/scaling-report-20-21.pdf" },
+  { year: 2019, url: "https://vtac.edu.au/files/pdf/reports/scaling_report_19.pdf" },
+  { year: 2018, url: "https://vtac.edu.au/files/pdf/scaling_report_18.pdf" },
+  { year: 2017, url: "https://vtac.edu.au/files/pdf/scaling_report_17.pdf" },
+  { year: 2016, url: "https://vtac.edu.au/files/pdf/scaling_report_16.pdf" },
+  { year: 2015, url: "https://vtac.edu.au/files/pdf/scaling-report-15.pdf" },
+  { year: 2014, url: "https://vtac.edu.au/files/pdf/scaling_report_2014.pdf" },
+  { year: 2013, url: "https://vtac.edu.au/pdf/scaling_report.pdf" },
+  { year: 2012, url: "https://vtac.edu.au/pdf/scaling_report_2013.pdf" },
+]
+const REPORTS = [...CURRENT_REPORTS, ...ARCHIVE_REPORTS]
 const RAW_SCORES = [20, 25, 30, 35, 40, 45, 50]
 const DEFAULT_OUT = "public/vtac-scaling-reports.json"
-const PARSER_VERSION = "vtac-scaling-pdf-v1"
+const PARSER_VERSION = "vtac-scaling-pdf-v2"
 const STANDARD_FONT_DATA_URL = `${resolve("node_modules/pdfjs-dist/standard_fonts")}${sep}`
+const NUMBER_PATTERN = "-?\\d+(?:\\.\\d+)?"
+const SCORE_COLUMNS_PATTERN = Array.from({ length: 9 }, () => `(${NUMBER_PATTERN})`).join("\\s+")
+const CODED_ROW_PATTERN = new RegExp(`^\\s*([A-Z]{1,4}\\d{0,2})\\s+(.+?)\\s+${SCORE_COLUMNS_PATTERN}\\s*$`)
+const LEGACY_ROW_PATTERN = new RegExp(`^\\s*(.+?[A-Za-z].*?)\\s+${SCORE_COLUMNS_PATTERN}\\s*$`)
 
 async function main() {
   const output = resolve(process.argv[2] ?? DEFAULT_OUT)
@@ -23,6 +39,7 @@ async function main() {
     })
     if (!response.ok) throw new Error(`Failed to fetch ${report.url}: ${response.status}`)
     const text = await extractPdfText(await response.arrayBuffer())
+    assertReportYear(report, text)
     const parsed = parseScalingReportText({ ...report, text })
     if (parsed.length < 50) throw new Error(`Only parsed ${parsed.length} studies for ${report.year}`)
     references.push(...parsed)
@@ -63,24 +80,54 @@ async function extractPdfText(buffer) {
   return pages.join("\n")
 }
 
+function assertReportYear(report, text) {
+  const match = text.match(/\b((?:19|20)\d{2})\s+Scaling Report\b/i)
+  if (match && Number(match[1]) !== report.year) {
+    throw new Error(`Expected a ${report.year} scaling report at ${report.url}, found ${match[1]}`)
+  }
+}
+
+function normaliseExtractedLine(line) {
+  return line.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function legacyStudyCode(studyName) {
+  const slug = studyName
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+  return `LEGACY_${slug}`
+}
+
 function parseScalingReportText({ year, url, text }) {
-  const rowPattern = /^\s*([A-Z]{1,4}\d{0,2})\s+(.+?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s*$/
   const references = []
-  for (const line of text.split(/\r?\n/)) {
-    const match = line.match(rowPattern)
+  for (const sourceLine of text.split(/\r?\n/)) {
+    const line = normaliseExtractedLine(sourceLine)
+    if (!line) continue
+    const codedMatch = line.match(CODED_ROW_PATTERN)
+    const legacyMatch = codedMatch ? null : line.match(LEGACY_ROW_PATTERN)
+    const match = codedMatch ?? legacyMatch
     if (!match) continue
-    const [, code, studyName, mean, standardDeviation, ...scaledScores] = match
+
+    const code = codedMatch ? match[1] : legacyStudyCode(match[1])
+    const studyName = codedMatch ? match[2] : match[1]
+    const numericOffset = codedMatch ? 3 : 2
+    const [mean, standardDeviation, ...scaledScores] = match.slice(numericOffset).map(Number)
+    if (![mean, standardDeviation, ...scaledScores].every(Number.isFinite)) continue
+
     references.push({
       id: `${code}:${year}`,
       code,
-      studyName: studyName.replace(/\s+/g, " ").trim(),
+      studyName,
       year,
-      mean: Number(mean),
-      standardDeviation: Number(standardDeviation),
+      mean,
+      standardDeviation,
       sourceUrl: url,
       points: RAW_SCORES.map((rawScore, index) => ({
         rawScore,
-        scaledScore: Number(scaledScores[index]),
+        scaledScore: scaledScores[index],
       })),
     })
   }
@@ -94,4 +141,4 @@ if (import.meta.main) {
   })
 }
 
-export { parseScalingReportText }
+export { ARCHIVE_REPORTS, CURRENT_REPORTS, REPORTS, parseScalingReportText }

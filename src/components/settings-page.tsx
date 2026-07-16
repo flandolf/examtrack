@@ -7,13 +7,11 @@ import { SubjectCombobox } from "@/components/subject-combobox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   loadAISettings,
-  REASONING_EFFORTS,
   saveAISettings,
   type AISettings,
   type ReasoningEffort,
@@ -26,6 +24,14 @@ const REASONING_LABELS: Record<ReasoningEffort, string> = {
   medium: "Medium",
   high: "High",
   xhigh: "Extra high",
+}
+
+const REASONING_OPTIONS = ["low", "medium", "high", "xhigh"] as const
+
+function getModelAccent(model: string) {
+  if (model.endsWith("-sol")) return "var(--chart-5)"
+  if (model.endsWith("-luna")) return "var(--chart-3)"
+  return "var(--chart-2)"
 }
 
 export function SettingsPage({ sync, subjects, selectedSubjects, onSubjectsChange }: {
@@ -54,7 +60,7 @@ export function SettingsPage({ sync, subjects, selectedSubjects, onSubjectsChang
     setLoadingModels(true)
     setModelError(null)
     try {
-      setModels((await createChatGPTProxyProvider().listModels()).filter((model) => model.startsWith("gpt-5")))
+      setModels(await createChatGPTProxyProvider().listModels())
     } catch {
       setModels([])
       setModelError("Could not load models for this account.")
@@ -69,6 +75,10 @@ export function SettingsPage({ sync, subjects, selectedSubjects, onSubjectsChang
   }, [auth.isAuthenticated])
 
   const identity = auth.user?.name ?? auth.user?.email ?? "ChatGPT account"
+  const modelOptions = models.filter((model) => model !== "auto" && model !== "codex-auto-review")
+  const selectedModel = modelOptions.includes(settings.model) ? settings.model : modelOptions[0]
+  const selectedEffort = settings.reasoningEffort === "none" ? "low" : settings.reasoningEffort
+  const fillPercent = ((REASONING_OPTIONS.indexOf(selectedEffort) + 0.5) / REASONING_OPTIONS.length) * 100
 
   return (
     <div className="grid gap-6">
@@ -224,31 +234,72 @@ export function SettingsPage({ sync, subjects, selectedSubjects, onSubjectsChang
           {auth.isAuthenticated ? <CardAction><Button size="sm" variant="ghost" disabled={loadingModels} onClick={() => void refreshModels()}><RefreshCw className={loadingModels ? "animate-spin" : ""} />Refresh</Button></CardAction> : null}
         </CardHeader>
         <CardContent>
-          <FieldGroup>
-            <Field>
-              <FieldLabel>Model</FieldLabel>
-              <Select value={settings.model} onValueChange={(model) => update({ ...settings, model: model ?? "auto" })}>
-                <SelectTrigger className="w-full"><SelectValue>{settings.model === "auto" ? "Automatic" : settings.model}</SelectValue></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Automatic</SelectItem>
-                  {models.map((model) => <SelectItem key={model} value={model}>{model}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <FieldDescription>Automatic prefers the newest supported model available to your account.</FieldDescription>
-              {modelError ? <p role="alert" className="text-sm text-destructive">{modelError}</p> : null}
-            </Field>
-
-            <Field>
-              <FieldLabel>Reasoning effort</FieldLabel>
-              <Select value={settings.reasoningEffort} onValueChange={(reasoningEffort) => update({ ...settings, reasoningEffort: reasoningEffort as ReasoningEffort })}>
-                <SelectTrigger className="w-full"><SelectValue>{REASONING_LABELS[settings.reasoningEffort]}</SelectValue></SelectTrigger>
-                <SelectContent>
-                  {REASONING_EFFORTS.map((effort) => <SelectItem key={effort} value={effort}>{REASONING_LABELS[effort]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <FieldDescription>Higher effort may improve difficult mathematical analysis but can take longer. Saved on this device.</FieldDescription>
-            </Field>
-          </FieldGroup>
+          <Field>
+            <FieldLabel>Model and reasoning</FieldLabel>
+            <div className="select-none overflow-x-auto pb-1">
+              <div className="grid min-w-[38rem] grid-cols-[minmax(10rem,1fr)_minmax(22rem,4fr)] items-center">
+                <span />
+                <div className="grid grid-cols-4 pb-2">
+                  {REASONING_OPTIONS.map((effort) => (
+                    <span key={effort} className="px-2 text-center text-sm text-muted-foreground">{REASONING_LABELS[effort]}</span>
+                  ))}
+                </div>
+                <div className="grid py-1">
+                  {modelOptions.map((model) => {
+                    const selected = model === selectedModel
+                    const accent = getModelAccent(model)
+                    return (
+                      <button
+                        key={model}
+                        type="button"
+                        className="h-12 truncate rounded-md px-2 text-left text-sm font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+                        style={{ color: selected ? accent : undefined }}
+                        onClick={() => update({ model, reasoningEffort: selectedEffort })}
+                      >
+                        {model === "auto" ? "Automatic" : model}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="grid rounded-xl bg-muted/80 p-1 ring-1 ring-border/60">
+                {modelOptions.map((model) => {
+                  const selected = model === selectedModel
+                  const accent = getModelAccent(model)
+                  return (
+                    <div key={model} className="relative grid h-12 grid-cols-4 items-center">
+                        <span
+                          aria-hidden="true"
+                          className={`absolute inset-y-1 left-0 rounded-full transition-[width,opacity] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${selected ? "opacity-100" : "opacity-0"}`}
+                          style={{ backgroundColor: accent, width: selected ? `${fillPercent}%` : 0 }}
+                        />
+                        {REASONING_OPTIONS.map((effort) => (
+                          <span key={effort} aria-hidden="true" className={`relative z-10 mx-auto size-2 rounded-full transition-colors duration-200 motion-reduce:transition-none ${selected ? "bg-black/55" : "bg-muted-foreground/35"}`} />
+                        ))}
+                        <input
+                          type="range"
+                          min={0}
+                          max={REASONING_OPTIONS.length - 1}
+                          step={1}
+                          value={REASONING_OPTIONS.indexOf(selectedEffort)}
+                          data-selected={selected}
+                          aria-label={`${model === "auto" ? "Automatic" : model} reasoning level`}
+                          aria-valuetext={REASONING_LABELS[selectedEffort]}
+                          className="model-reasoning-slider z-20"
+                          style={{ "--slider-accent": accent } as React.CSSProperties}
+                          onPointerDown={() => {
+                            if (!selected) update({ model, reasoningEffort: selectedEffort })
+                          }}
+                          onChange={(event) => update({ model, reasoningEffort: REASONING_OPTIONS[Number(event.currentTarget.value)] })}
+                        />
+                    </div>
+                  )
+                })}
+                </div>
+              </div>
+            </div>
+            <FieldDescription>Choose a model and reasoning level together. Higher reasoning can take longer. Saved on this device.</FieldDescription>
+            {modelError ? <p role="alert" className="text-sm text-destructive">{modelError}</p> : null}
+          </Field>
         </CardContent>
       </Card>
     </div>

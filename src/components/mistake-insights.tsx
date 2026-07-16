@@ -1,8 +1,9 @@
 import { useState } from "react"
-import { ChevronDown, ChevronUp, RefreshCw, Sparkles } from "lucide-react"
+import { RefreshCw, Sparkles } from "lucide-react"
 import { toast } from "sonner"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { MarkdownPreview } from "@/components/markdown-preview"
 import { analyseMistakes, formatChatGPTProgress, generateMistakePracticeQuestions, type ChatGPTProgress } from "@/lib/mistake-ai"
 import type { AppData, MistakeInsights as MistakeInsightsData } from "@/lib/exam-data"
@@ -17,11 +18,10 @@ export function MistakeInsights({ data, priorityCategory, onSave }: { data: AppD
   const insights = data.mistakeInsights
   const stale = insights && data.mistakes.some((mistake) => mistake.updatedAt > insights.generatedAt)
 
-  function toggleMinimized() {
-    setMinimized((current) => {
-      localStorage.setItem(MINIMIZED_KEY, String(!current))
-      return !current
-    })
+  function setExpanded(value: string[]) {
+    const nextMinimized = !value.includes("insights")
+    localStorage.setItem(MINIMIZED_KEY, String(nextMinimized))
+    setMinimized(nextMinimized)
   }
 
   async function runAnalysis() {
@@ -51,24 +51,24 @@ export function MistakeInsights({ data, priorityCategory, onSave }: { data: AppD
   }
 
   return (
-    <Card className={minimized ? "py-2" : undefined}>
-      <CardHeader className="grid-cols-[1fr_auto] items-start gap-3">
-        <div>
-          <CardTitle>Mistake insights</CardTitle>
-          {!minimized ? <CardDescription>{insights ? `Last updated ${new Date(insights.generatedAt).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}${stale ? " · Mistakes changed since then" : ""}` : "Run when you want ChatGPT to find patterns across your logged mistakes. It never runs automatically."}</CardDescription> : null}
-        </div>
-        <div className="flex items-center gap-2">
-          {!minimized ? <Button variant={insights ? "outline" : "default"} onClick={() => void runAnalysis()} disabled={!data.mistakes.length || running || generatingQuestions}>
-            {insights ? <RefreshCw /> : <Sparkles />}{running ? "Analysing…" : insights ? "Refresh" : "Analyse mistakes"}
-          </Button> : null}
-          <Button variant="ghost" size={minimized ? "icon-sm" : "icon"} aria-expanded={!minimized} aria-label={minimized ? "Expand mistake insights" : "Minimise mistake insights"} onClick={toggleMinimized}>
-            {minimized ? <ChevronDown /> : <ChevronUp />}
-          </Button>
-        </div>
-      </CardHeader>
-      {!minimized && progress ? <p role="status" aria-live="polite" className="px-6 text-sm text-muted-foreground tabular-nums">{formatChatGPTProgress(progress)}</p> : null}
-      {!minimized && (priorityCategory || insights) ? (
-        <CardContent className="grid gap-5">
+    <Card className="gap-0 py-0">
+      <Accordion value={minimized ? [] : ["insights"]} onValueChange={setExpanded}>
+        <AccordionItem value="insights" className="border-0">
+          <AccordionTrigger className="rounded-xl px-4 py-3 hover:no-underline">
+            <div className="min-w-0 pr-3">
+              <CardTitle>Mistake insights</CardTitle>
+              {!minimized ? <CardDescription className="mt-1">{insights ? `Last updated ${new Date(insights.generatedAt).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}${stale ? " · Mistakes changed since then" : ""}` : "Run when you want ChatGPT to find patterns across your logged mistakes. It never runs automatically."}</CardDescription> : null}
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="grid gap-4 px-4 pb-4 [&_p:not(:last-child)]:mb-0">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {progress ? <p role="status" aria-live="polite" className="text-sm text-muted-foreground tabular-nums">{formatChatGPTProgress(progress)}</p> : null}
+              <Button className="max-sm:w-full sm:ml-auto" variant={insights ? "outline" : "default"} onClick={() => void runAnalysis()} disabled={!data.mistakes.length || running || generatingQuestions}>
+                {insights ? <RefreshCw /> : <Sparkles />}{running ? "Analysing…" : insights ? "Refresh" : "Analyse mistakes"}
+              </Button>
+            </div>
+            {(priorityCategory || insights) ? (
+              <CardContent className="grid gap-5 px-0">
           {priorityCategory ? <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm">
             <span className="font-medium">Start with {priorityCategory}.</span>{" "}
             <span className="text-muted-foreground">It is your most frequent unresolved error type; older mistakes in that category are first.</span>
@@ -94,8 +94,11 @@ export function MistakeInsights({ data, priorityCategory, onSave }: { data: AppD
           </div>
           {insights.practiceQuestions ? <MarkdownPreview>{insights.practiceQuestions}</MarkdownPreview> : null}
           </> : null}
-        </CardContent>
-      ) : null}
+              </CardContent>
+            ) : null}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </Card>
   )
 }

@@ -23,12 +23,13 @@ const ARCHIVE_REPORTS = [
 const REPORTS = [...CURRENT_REPORTS, ...ARCHIVE_REPORTS]
 const RAW_SCORES = [20, 25, 30, 35, 40, 45, 50]
 const DEFAULT_OUT = "public/vtac-scaling-reports.json"
-const PARSER_VERSION = "vtac-scaling-pdf-v2"
+const PARSER_VERSION = "vtac-scaling-pdf-v3"
 const STANDARD_FONT_DATA_URL = `${resolve("node_modules/pdfjs-dist/standard_fonts")}${sep}`
 const NUMBER_PATTERN = "-?\\d+(?:\\.\\d+)?"
 const SCORE_COLUMNS_PATTERN = Array.from({ length: 9 }, () => `(${NUMBER_PATTERN})`).join("\\s+")
-const CODED_ROW_PATTERN = new RegExp(`^\\s*([A-Z]{1,4}\\d{0,2})\\s+(.+?)\\s+${SCORE_COLUMNS_PATTERN}\\s*$`)
-const LEGACY_ROW_PATTERN = new RegExp(`^\\s*(.+?[A-Za-z].*?)\\s+${SCORE_COLUMNS_PATTERN}\\s*$`)
+const PAGE_FOOTER_PATTERN = "(?:\\s+(?:\\d{1,2}\\s+)?[A-Za-z]+\\s+\\d{4}\\s+\\d+\\s+of\\s+\\d+)?"
+const CODED_ROW_PATTERN = new RegExp(`^\\s*([A-Z]{1,4}\\d{0,2})\\s+(.+?)\\s+${SCORE_COLUMNS_PATTERN}${PAGE_FOOTER_PATTERN}\\s*$`)
+const LEGACY_ROW_PATTERN = new RegExp(`^\\s*(.+?[A-Za-z].*?)\\s+${SCORE_COLUMNS_PATTERN}${PAGE_FOOTER_PATTERN}\\s*$`)
 
 async function main() {
   const output = resolve(process.argv[2] ?? DEFAULT_OUT)
@@ -64,20 +65,47 @@ async function extractPdfText(buffer) {
   for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
     const page = await document.getPage(pageNumber)
     const content = await page.getTextContent()
-    const rows = new Map()
-    for (const item of content.items) {
-      if (!("str" in item) || !item.str.trim()) continue
-      const y = Math.round(item.transform[5] / 2) * 2
-      const row = rows.get(y) ?? []
-      row.push({ x: item.transform[4], text: item.str })
-      rows.set(y, row)
-    }
-    pages.push([...rows.entries()]
-      .sort(([first], [second]) => second - first)
-      .map(([, row]) => row.toSorted((a, b) => a.x - b.x).map((item) => item.text).join(" "))
-      .join("\n"))
+    pages.push(extractPageText(content.items))
   }
   return pages.join("\n")
+}
+
+function extractPageText(items) {
+  const positionedRows = new Map()
+  const streamLines = []
+  let streamLine = []
+  let previousY = null
+
+  function flushStreamLine() {
+    const line = streamLine.join(" ").trim()
+    if (line) streamLines.push(line)
+    streamLine = []
+  }
+
+  for (const item of items) {
+    if (!("str" in item) || !item.str.trim()) continue
+    const x = item.transform[4]
+    const y = item.transform[5]
+    const rowY = Math.round(y / 2) * 2
+    const row = positionedRows.get(rowY) ?? []
+    row.push({ x, text: item.str })
+    positionedRows.set(rowY, row)
+
+    if (previousY !== null && Math.abs(y - previousY) > 2) flushStreamLine()
+    streamLine.push(item.str)
+    if (item.hasEOL) flushStreamLine()
+    previousY = y
+  }
+  flushStreamLine()
+
+  const positionedText = [...positionedRows.entries()]
+    .sort(([first], [second]) => second - first)
+    .map(([, row]) => row.toSorted((a, b) => a.x - b.x).map((item) => item.text).join(" "))
+    .join("\n")
+  const streamText = streamLines.join("\n")
+
+  if (!streamText || streamText === positionedText) return positionedText
+  return `${positionedText}\n${streamText}`
 }
 
 function assertReportYear(report, text) {
@@ -102,7 +130,7 @@ function legacyStudyCode(studyName) {
 }
 
 function parseScalingReportText({ year, url, text }) {
-  const references = []
+  const references = new Map()
   for (const sourceLine of text.split(/\r?\n/)) {
     const line = normaliseExtractedLine(sourceLine)
     if (!line) continue
@@ -114,11 +142,12 @@ function parseScalingReportText({ year, url, text }) {
     const code = codedMatch ? match[1] : legacyStudyCode(match[1])
     const studyName = codedMatch ? match[2] : match[1]
     const numericOffset = codedMatch ? 3 : 2
-    const [mean, standardDeviation, ...scaledScores] = match.slice(numericOffset).map(Number)
+    const [mean, standardDeviation, ...scaledScores] = match.slice(numericOffset, numericOffset + 9).map(Number)
     if (![mean, standardDeviation, ...scaledScores].every(Number.isFinite)) continue
 
-    references.push({
-      id: `${code}:${year}`,
+    const id = `${code}:${year}`
+    references.set(id, {
+      id,
       code,
       studyName,
       year,
@@ -131,7 +160,7 @@ function parseScalingReportText({ year, url, text }) {
       })),
     })
   }
-  return references
+  return [...references.values()]
 }
 
 if (import.meta.main) {
@@ -141,4 +170,4 @@ if (import.meta.main) {
   })
 }
 
-export { ARCHIVE_REPORTS, CURRENT_REPORTS, REPORTS, parseScalingReportText }
+export { ARCHIVE_REPORTS, CURRENT_REPORTS, REPORTS, extractPageText, parseScalingReportText }

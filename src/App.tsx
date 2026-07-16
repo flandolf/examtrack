@@ -63,6 +63,7 @@ import {
 import { downloadAppData, loadAppData, parseAppDataFile, saveAppData } from "@/lib/storage"
 import { buildRevisionPriorities, buildRevisionQueue } from "@/lib/mistake-review"
 import { downloadMistakesPdf } from "@/lib/mistake-pdf"
+import { getExamTarget } from "@/lib/exam-target"
 import { useSupabaseSync } from "@/lib/sync"
 import { loadTimetable, suggestTimetableForAttempt, formatExamLabel, type Timetable } from "@/lib/timetable"
 import type { ScalingReference } from "@/lib/scaling"
@@ -170,7 +171,7 @@ function AppSidebar({ view, data, syncLabel, onViewChange }: { view: View; data:
   )
 }
 
-function MistakeList({ mistakes, attempts, mastered, viewMode, onEdit, onReview, onDelete }: { mistakes: Mistake[]; attempts: ExamAttempt[]; mastered?: boolean; viewMode: "list" | "individual"; onEdit: (mistake: Mistake) => void; onReview: (mistake: Mistake, result: ReviewResult) => void; onDelete: (mistake: Mistake) => void }) {
+function MistakeList({ mistakes, attempts, mastered, viewMode, onGoToExam, onEdit, onReview, onDelete }: { mistakes: Mistake[]; attempts: ExamAttempt[]; mastered?: boolean; viewMode: "list" | "individual"; onGoToExam: () => void; onEdit: (mistake: Mistake) => void; onReview: (mistake: Mistake, result: ReviewResult) => void; onDelete: (mistake: Mistake) => void }) {
   const [position, setPosition] = useState(0)
   const attemptMap = useMemo(() => new Map(attempts.map((attempt) => [attempt.id, attempt])), [attempts])
   if (!mistakes.length) return <Empty className="min-h-64 border"><EmptyHeader><EmptyMedia variant="icon"><NotebookPen /></EmptyMedia><EmptyTitle>{mastered ? "No mastered mistakes yet" : "Revision queue clear"}</EmptyTitle><EmptyDescription>{mastered ? "Mistakes you can now answer correctly will appear here." : "Log a mistake after your next practice exam or revise a mastered one again."}</EmptyDescription></EmptyHeader></Empty>
@@ -184,7 +185,7 @@ function MistakeList({ mistakes, attempts, mastered, viewMode, onEdit, onReview,
           <Card key={mistake.id} className="min-w-0">
             <CardHeader>
               <div className="flex items-start justify-between gap-3">
-                <div><CardTitle>{mistake.question}</CardTitle><CardDescription>{attempt ? `${attempt.title} · ${attempt.paper}` : "Deleted exam"}</CardDescription></div>
+                <div><CardTitle>{mistake.question}</CardTitle><CardDescription>{attempt ? <>{attempt.title} · {attempt.paper} <a className="font-medium text-foreground underline underline-offset-4" href={`#${getExamTarget(attempt.id)}`} onClick={onGoToExam}>Go to</a></> : "Deleted exam"}</CardDescription></div>
                 <div className="flex flex-wrap justify-end gap-1.5"><Badge variant={mistake.resolved ? "secondary" : "outline"}>{mistake.category}</Badge>{mistake.areaOfStudy ? <Badge variant="outline">{mistake.areaOfStudy}</Badge> : null}</div>
               </div>
             </CardHeader>
@@ -236,7 +237,7 @@ function MistakeList({ mistakes, attempts, mastered, viewMode, onEdit, onReview,
   )
 }
 
-function MistakesPage({ data, onLog, onEdit, onReview, onDelete, onSaveInsights }: { data: AppData; onLog: () => void; onEdit: (mistake: Mistake) => void; onReview: (mistake: Mistake, result: ReviewResult) => void; onDelete: (mistake: Mistake) => void; onSaveInsights: (insights: NonNullable<AppData["mistakeInsights"]>) => void }) {
+function MistakesPage({ data, onLog, onGoToExam, onEdit, onReview, onDelete, onSaveInsights }: { data: AppData; onLog: () => void; onGoToExam: () => void; onEdit: (mistake: Mistake) => void; onReview: (mistake: Mistake, result: ReviewResult) => void; onDelete: (mistake: Mistake) => void; onSaveInsights: (insights: NonNullable<AppData["mistakeInsights"]>) => void }) {
   const [subject, setSubject] = useState("all")
   const [viewMode, setViewMode] = useState<"list" | "individual">("list")
   const [exporting, setExporting] = useState(false)
@@ -292,9 +293,9 @@ function MistakesPage({ data, onLog, onEdit, onReview, onDelete, onSaveInsights 
         <TabsList><TabsTrigger value="unresolved">To review ({unresolved.length})</TabsTrigger><TabsTrigger value="resolved">Mastered ({resolved.length})</TabsTrigger></TabsList>
         <TabsContent value="unresolved" className="mt-4">
           {due.length !== unresolved.length ? <p className="mb-3 text-sm text-muted-foreground">{due.length} due now · {unresolved.length - due.length} scheduled for later</p> : null}
-          <MistakeList mistakes={[...due, ...unresolved.filter((item) => !due.some((dueItem) => dueItem.id === item.id))]} attempts={data.attempts} viewMode={viewMode} onEdit={onEdit} onReview={onReview} onDelete={onDelete} />
+          <MistakeList mistakes={[...due, ...unresolved.filter((item) => !due.some((dueItem) => dueItem.id === item.id))]} attempts={data.attempts} viewMode={viewMode} onGoToExam={onGoToExam} onEdit={onEdit} onReview={onReview} onDelete={onDelete} />
         </TabsContent>
-        <TabsContent value="resolved" className="mt-4"><MistakeList mistakes={resolved} attempts={data.attempts} mastered viewMode={viewMode} onEdit={onEdit} onReview={onReview} onDelete={onDelete} /></TabsContent>
+        <TabsContent value="resolved" className="mt-4"><MistakeList mistakes={resolved} attempts={data.attempts} mastered viewMode={viewMode} onGoToExam={onGoToExam} onEdit={onEdit} onReview={onReview} onDelete={onDelete} /></TabsContent>
       </Tabs>
     </div>
   )
@@ -566,7 +567,7 @@ export default function App() {
               />
             </Suspense>
           ) : null}
-          {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onReview={reviewMistake} onDelete={deleteMistake} onSaveInsights={(mistakeInsights) => setData((current) => ({ ...current, mistakeInsights }))} /> : null}
+          {view === "mistakes" ? <MistakesPage data={data} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onGoToExam={() => setView("dashboard")} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onReview={reviewMistake} onDelete={deleteMistake} onSaveInsights={(mistakeInsights) => setData((current) => ({ ...current, mistakeInsights }))} /> : null}
           {view === "library" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamLibrary references={references} studies={resourceStudies} attempts={data.attempts} completedExamIds={data.completedExamIds} generatedAt={resourcesGeneratedAt ?? referencesGeneratedAt} preferredSubjects={data.subjects} onToggleCompleted={toggleCompletedExam} onStart={(preset) => { setTimerPreset(preset); setView("timer") }} /></Suspense> : null}
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer key={timerPreset ? `${timerPreset.subject}-${timerPreset.examYear}-${timerPreset.paper}` : "manual"} references={references} preferredSubjects={data.subjects} initialExam={timerPreset} onSave={(attempt) => { setTimerPreset(null); saveTimedAttempt(attempt) }} /></Suspense> : null}
           {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} scalingReferences={scalingReferences} /></Suspense> : null}

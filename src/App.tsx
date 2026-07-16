@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -170,12 +170,15 @@ function AppSidebar({ view, data, syncLabel, onViewChange }: { view: View; data:
   )
 }
 
-function MistakeList({ mistakes, attempts, mastered, onEdit, onReview, onDelete }: { mistakes: Mistake[]; attempts: ExamAttempt[]; mastered?: boolean; onEdit: (mistake: Mistake) => void; onReview: (mistake: Mistake, result: ReviewResult) => void; onDelete: (mistake: Mistake) => void }) {
+function MistakeList({ mistakes, attempts, mastered, viewMode, onEdit, onReview, onDelete }: { mistakes: Mistake[]; attempts: ExamAttempt[]; mastered?: boolean; viewMode: "list" | "individual"; onEdit: (mistake: Mistake) => void; onReview: (mistake: Mistake, result: ReviewResult) => void; onDelete: (mistake: Mistake) => void }) {
+  const [position, setPosition] = useState(0)
   const attemptMap = useMemo(() => new Map(attempts.map((attempt) => [attempt.id, attempt])), [attempts])
   if (!mistakes.length) return <Empty className="min-h-64 border"><EmptyHeader><EmptyMedia variant="icon"><NotebookPen /></EmptyMedia><EmptyTitle>{mastered ? "No mastered mistakes yet" : "Revision queue clear"}</EmptyTitle><EmptyDescription>{mastered ? "Mistakes you can now answer correctly will appear here." : "Log a mistake after your next practice exam or revise a mastered one again."}</EmptyDescription></EmptyHeader></Empty>
+  const currentPosition = Math.min(position, mistakes.length - 1)
+  const shownMistakes = viewMode === "individual" ? [mistakes[currentPosition]] : mistakes
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      {mistakes.map((mistake) => {
+    <div className={viewMode === "individual" ? "mx-auto mb-[35vh] w-full max-w-4xl" : "grid gap-4 lg:grid-cols-2"}>
+      {shownMistakes.map((mistake) => {
         const attempt = attemptMap.get(mistake.attemptId)
         return (
           <Card key={mistake.id} className="min-w-0">
@@ -198,7 +201,7 @@ function MistakeList({ mistakes, attempts, mastered, onEdit, onReview, onDelete 
                   </div>
                 </details>
               </Suspense>
-              <div className="flex flex-wrap gap-2">
+              {viewMode === "list" ? <div className="flex flex-wrap gap-2">
                 {!mastered ? <>
                   <Button size="sm" variant="outline" onClick={() => onReview(mistake, "incorrect")}>Still incorrect</Button>
                   <Button size="sm" variant="outline" onClick={() => onReview(mistake, "assisted")}>Needed help</Button>
@@ -206,8 +209,26 @@ function MistakeList({ mistakes, attempts, mastered, onEdit, onReview, onDelete 
                 </> : null}
                 <Button size="sm" variant="outline" onClick={() => onEdit(mistake)}>Edit</Button>
                 <Button size="sm" variant="ghost" onClick={() => onDelete(mistake)}>Delete</Button>
-              </div>
+              </div> : null}
             </CardContent>
+            {viewMode === "individual" ? (
+              <CardFooter className="grid gap-3 sm:grid-cols-[1fr_auto_1fr]">
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => onEdit(mistake)}>Edit</Button>
+                  <Button size="sm" variant="ghost" onClick={() => onDelete(mistake)}>Delete</Button>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setPosition(currentPosition - 1)} disabled={currentPosition === 0}>Previous</Button>
+                  <span className="min-w-14 text-center text-xs tabular-nums text-muted-foreground">{currentPosition + 1} of {mistakes.length}</span>
+                  <Button size="sm" variant="outline" onClick={() => setPosition(currentPosition + 1)} disabled={currentPosition === mistakes.length - 1}>Next</Button>
+                </div>
+                {!mastered ? <div className="flex flex-wrap justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={() => onReview(mistake, "incorrect")}>Still incorrect</Button>
+                  <Button size="sm" variant="outline" onClick={() => onReview(mistake, "assisted")}>Needed help</Button>
+                  <Button size="sm" onClick={() => onReview(mistake, "correct")}>Correct unaided</Button>
+                </div> : <div />}
+              </CardFooter>
+            ) : null}
           </Card>
         )
       })}
@@ -217,6 +238,7 @@ function MistakeList({ mistakes, attempts, mastered, onEdit, onReview, onDelete 
 
 function MistakesPage({ data, onLog, onEdit, onReview, onDelete, onSaveInsights }: { data: AppData; onLog: () => void; onEdit: (mistake: Mistake) => void; onReview: (mistake: Mistake, result: ReviewResult) => void; onDelete: (mistake: Mistake) => void; onSaveInsights: (insights: NonNullable<AppData["mistakeInsights"]>) => void }) {
   const [subject, setSubject] = useState("all")
+  const [viewMode, setViewMode] = useState<"list" | "individual">("list")
   const [exporting, setExporting] = useState(false)
   const attemptSubjects = useMemo(() => new Map(data.attempts.map((attempt) => [attempt.id, attempt.subject])), [data.attempts])
   const subjects = useMemo(() => [...new Set(data.attempts.map((attempt) => attempt.subject))].toSorted(), [data.attempts])
@@ -244,35 +266,35 @@ function MistakesPage({ data, onLog, onEdit, onReview, onDelete, onSaveInsights 
         <Button variant="outline" onClick={() => void exportWorksheet()} disabled={!unresolved.length || exporting}><FileDown />{exporting ? "Creating PDF..." : "Export worksheet"}</Button>
         <Button onClick={onLog} disabled={!data.attempts.length}><Plus />Log mistake</Button>
       </PageHeader>
-      <Suspense fallback={<Skeleton className="h-40 w-full" />}><MistakeInsights data={data} onSave={onSaveInsights} /></Suspense>
+      <Suspense fallback={<Skeleton className="h-40 w-full" />}><MistakeInsights data={data} priorityCategory={topPriority?.category} onSave={onSaveInsights} /></Suspense>
       {data.mistakes.length ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <Progress value={completion} className="w-48" />
-          <span className="text-sm text-muted-foreground">{resolved.length} of {visibleMistakes.length} mastered</span>
-          {subjects.length > 1 ? (
-            <Select value={activeSubject} onValueChange={(value) => setSubject(value ?? "all")}>
-              <SelectTrigger aria-label="Filter mistakes by subject"><SelectValue>{activeSubject === "all" ? "All subjects" : activeSubject}</SelectValue></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All subjects</SelectItem>
-                {subjects.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          ) : null}
-        </div>
-      ) : null}
-      {topPriority ? (
-        <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm">
-          <span className="font-medium">Start with {topPriority.category}.</span>{" "}
-          <span className="text-muted-foreground">It is your most frequent unresolved error type; older mistakes in that category are first.</span>
+        <div className="grid gap-3">
+          <Progress value={completion} className="w-full" />
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-muted-foreground">{resolved.length} of {visibleMistakes.length} mastered</span>
+            {subjects.length > 1 ? (
+              <Select value={activeSubject} onValueChange={(value) => setSubject(value ?? "all")}>
+                <SelectTrigger aria-label="Filter mistakes by subject"><SelectValue>{activeSubject === "all" ? "All subjects" : activeSubject}</SelectValue></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All subjects</SelectItem>
+                  {subjects.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : null}
+            <div className="ml-auto flex rounded-lg bg-muted p-0.5" role="group" aria-label="Mistake view">
+              <Button size="sm" variant={viewMode === "list" ? "secondary" : "ghost"} aria-pressed={viewMode === "list"} onClick={() => setViewMode("list")}>List</Button>
+              <Button size="sm" variant={viewMode === "individual" ? "secondary" : "ghost"} aria-pressed={viewMode === "individual"} onClick={() => setViewMode("individual")}>Individual</Button>
+            </div>
+          </div>
         </div>
       ) : null}
       <Tabs defaultValue="unresolved">
         <TabsList><TabsTrigger value="unresolved">To review ({unresolved.length})</TabsTrigger><TabsTrigger value="resolved">Mastered ({resolved.length})</TabsTrigger></TabsList>
         <TabsContent value="unresolved" className="mt-4">
           {due.length !== unresolved.length ? <p className="mb-3 text-sm text-muted-foreground">{due.length} due now · {unresolved.length - due.length} scheduled for later</p> : null}
-          <MistakeList mistakes={[...due, ...unresolved.filter((item) => !due.some((dueItem) => dueItem.id === item.id))]} attempts={data.attempts} onEdit={onEdit} onReview={onReview} onDelete={onDelete} />
+          <MistakeList mistakes={[...due, ...unresolved.filter((item) => !due.some((dueItem) => dueItem.id === item.id))]} attempts={data.attempts} viewMode={viewMode} onEdit={onEdit} onReview={onReview} onDelete={onDelete} />
         </TabsContent>
-        <TabsContent value="resolved" className="mt-4"><MistakeList mistakes={resolved} attempts={data.attempts} mastered onEdit={onEdit} onReview={onReview} onDelete={onDelete} /></TabsContent>
+        <TabsContent value="resolved" className="mt-4"><MistakeList mistakes={resolved} attempts={data.attempts} mastered viewMode={viewMode} onEdit={onEdit} onReview={onReview} onDelete={onDelete} /></TabsContent>
       </Tabs>
     </div>
   )

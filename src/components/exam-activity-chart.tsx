@@ -7,7 +7,7 @@ const LEVEL_CLASSES: Record<ExamActivityLevel, string> = {
   0: "bg-muted",
   1: "bg-primary/20",
   2: "bg-primary/40",
-  3: "bg-primary/65",
+  3: "bg-primary/60",
   4: "bg-primary",
 }
 

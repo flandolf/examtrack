@@ -19,7 +19,7 @@ const reference: AssessmentReference = {
   ],
 }
 
-function attempt(id: string, rawScore: number, completedAt: string): ExamAttempt {
+function attempt(id: string, rawScore: number, completedAt: string, overrides: Partial<ExamAttempt> = {}): ExamAttempt {
   return {
     id,
     subject: "Mathematical Methods",
@@ -33,6 +33,7 @@ function attempt(id: string, rawScore: number, completedAt: string): ExamAttempt
     referenceId: reference.id,
     createdAt: `${completedAt}T00:00:00.000Z`,
     updatedAt: `${completedAt}T00:00:00.000Z`,
+    ...overrides,
   }
 }
 
@@ -43,11 +44,12 @@ const reference2: AssessmentReference = {
   name: "WRITTEN EXAMINATION 2",
 }
 
-function exam2Attempt(id: string, rawScore: number, completedAt: string): ExamAttempt {
+function exam2Attempt(id: string, rawScore: number, completedAt: string, overrides: Partial<ExamAttempt> = {}): ExamAttempt {
   return {
     ...attempt(id, rawScore, completedAt),
     paper: "Exam 2",
     referenceId: reference2.id,
+    ...overrides,
   }
 }
 
@@ -117,6 +119,58 @@ describe("study score prediction", () => {
     ])
     expect(prediction?.sacPercentile).toBe(90)
     expect(prediction?.combinedPercentile).toBeCloseTo(92, 8)
+  })
+
+  test("uses every historical Methods paper with the nearest available distribution", () => {
+    const distributionYears = [2006, 2007, 2009]
+    const historicalReferences = distributionYears.flatMap((year) => [
+      { ...reference, id: `METHODS:${year}:GA-2`, year },
+      { ...reference2, id: `METHODS:${year}:GA-3`, year },
+    ])
+    const historicalAttempts = [2006, 2007, 2008, 2009, 2010, 2011].flatMap((year, index) => {
+      const completedAt = `2026-07-${String(index + 1).padStart(2, "0")}`
+      return [
+        attempt(`${year}-1`, 32, completedAt, {
+          title: `VCAA ${year} Mathematical Methods`,
+          examYear: year,
+          referenceId: null,
+        }),
+        exam2Attempt(`${year}-2`, 36, completedAt, {
+          title: `VCAA ${year} Mathematical Methods`,
+          examYear: year,
+          referenceId: null,
+        }),
+      ]
+    })
+
+    const prediction = predictStudyScore({
+      subject: "Mathematical Methods",
+      attempts: historicalAttempts,
+      references: historicalReferences,
+    })
+
+    expect(prediction?.evidence).toHaveLength(12)
+    expect(prediction?.excludedAttemptCount).toBe(0)
+    expect(prediction?.approximatedEvidenceCount).toBe(6)
+    const evidence = new Map(prediction?.evidence.map((item) => [item.attempt.id, item]))
+    expect(evidence.get("2008-1")).toMatchObject({ referenceYear: 2009, exactReferenceYear: false })
+    expect(evidence.get("2010-2")).toMatchObject({ referenceYear: 2009, exactReferenceYear: false })
+    expect(evidence.get("2011-1")).toMatchObject({ referenceYear: 2009, exactReferenceYear: false })
+    expect(evidence.get("2007-2")).toMatchObject({ referenceYear: 2007, exactReferenceYear: true })
+  })
+
+  test("matches the legacy Mathematical Methods CAS subject name", () => {
+    const prediction = predictStudyScore({
+      subject: "Mathematical Methods",
+      attempts: [attempt("legacy", 32, "2026-07-01", {
+        subject: "Mathematical Methods (CAS)",
+        referenceId: null,
+      })],
+      references: [reference],
+    })
+
+    expect(prediction?.evidence).toHaveLength(1)
+    expect(prediction?.excludedAttemptCount).toBe(0)
   })
 
   test("returns no prediction without an official linked result", () => {

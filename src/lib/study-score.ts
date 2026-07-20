@@ -1,14 +1,17 @@
 import {
   analyseAttempt,
-  findAttemptReference,
+  normaliseComparisonName,
   type AssessmentReference,
   type ExamAttempt,
 } from "@/lib/exam-data"
+import { normaliseScalingStudyName } from "@/lib/scaling"
 
 export type StudyScoreEvidence = {
   attempt: ExamAttempt
   percentile: number
   weight: number
+  referenceYear: number
+  exactReferenceYear: boolean
 }
 
 export type StudyScoreComponent = {
@@ -31,7 +34,11 @@ export type StudyScorePrediction = {
   confidence: "Low" | "Medium" | "High"
   evidence: StudyScoreEvidence[]
   components: StudyScoreComponent[]
+  approximatedEvidenceCount: number
+  excludedAttemptCount: number
 }
+
+type UnweightedEvidence = Omit<StudyScoreEvidence, "weight">
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value))
@@ -42,7 +49,7 @@ function clamp(value: number, minimum: number, maximum: number) {
 export function inverseNormalCdf(probability: number): number {
   const p = clamp(probability, 0.0001, 0.9999)
   const a = [-39.6968302866538, 220.946098424521, -275.928510446969, 138.357751867269, -30.6647980661472, 2.50662827745924]
-  const b = [-54.4760987982241, 161.585836858041, -155.698979859887, 66.8013118877197, -13.2806815528857]
+  const b = [-54.4760987982241, 161.585836041, -155.698979859887, 66.8013118877197, -13.2806815528857]
   const c = [-0.00778489400243029, -0.322396458041136, -2.40075827716184, -2.54973253934373, 4.37466414146497, 2.93816398269878]
   const d = [0.00778469570904146, 0.32246712907004, 2.445134137143, 3.75440866190742]
   const lower = 0.02425
@@ -82,7 +89,44 @@ function paperNumber(paper: string): 1 | 2 | null {
   return match?.[1] === "1" ? 1 : match?.[1] === "2" ? 2 : null
 }
 
-function weightEvidence(items: Array<{ attempt: ExamAttempt; percentile: number }>): StudyScoreEvidence[] {
+function sameStudy(first: string, second: string) {
+  return normaliseScalingStudyName(first) === normaliseScalingStudyName(second)
+}
+
+function compatibleReferences(attempt: ExamAttempt, references: AssessmentReference[]) {
+  const subjectReferences = references.filter((reference) => sameStudy(reference.studyName, attempt.subject))
+  const paper = normaliseComparisonName(attempt.paper)
+  const paperMatches = subjectReferences.filter(
+    (reference) => normaliseComparisonName(reference.name) === paper,
+  )
+  if (paperMatches.length) return paperMatches
+
+  const countByYear = new Map<number, number>()
+  for (const reference of subjectReferences) {
+    countByYear.set(reference.year, (countByYear.get(reference.year) ?? 0) + 1)
+  }
+  return subjectReferences.filter((reference) => countByYear.get(reference.year) === 1)
+}
+
+function findStudyScoreReference(attempt: ExamAttempt, references: AssessmentReference[]) {
+  const candidates = compatibleReferences(attempt, references)
+  if (candidates.length === 0) return undefined
+
+  const exact = candidates.find((reference) => reference.year === attempt.examYear)
+  if (exact) return exact
+
+  const explicitlyLinked = attempt.referenceId
+    ? candidates.find((reference) => reference.id === attempt.referenceId)
+    : undefined
+  if (explicitlyLinked) return explicitlyLinked
+
+  return candidates.toSorted((first, second) =>
+    Math.abs(first.year - attempt.examYear) - Math.abs(second.year - attempt.examYear) ||
+    second.year - first.year
+  )[0]
+}
+
+function weightEvidence(items: UnweightedEvidence[]): StudyScoreEvidence[] {
   return items
     .toSorted((first, second) => first.attempt.completedAt.localeCompare(second.attempt.completedAt))
     .map((item, index) => ({
@@ -124,14 +168,18 @@ export function predictStudyScore({
   sacPercentile?: number | null
   examWeightPercent?: number
 }): StudyScorePrediction | null {
-  const linked = attempts
-    .filter((attempt) => attempt.subject === subject)
-    .flatMap((attempt) => {
-      const reference = findAttemptReference(attempt, references)
-      if (!reference) return []
-      const percentile = analyseAttempt(attempt, reference).percentile
-      return percentile === null ? [] : [{ attempt, percentile }]
-    })
+  const subjectAttempts = attempts.filter((attempt) => sameStudy(attempt.subject, subject))
+  const linked = subjectAttempts.flatMap((attempt) => {
+    const reference = findStudyScoreReference(attempt, references)
+    if (!reference) return []
+    const percentile = analyseAttempt(attempt, reference).percentile
+    return percentile === null ? [] : [{
+      attempt,
+      percentile,
+      referenceYear: reference.year,
+      exactReferenceYear: reference.year === attempt.examYear,
+    }]
+  })
 
   if (linked.length === 0) return null
 
@@ -213,5 +261,7 @@ export function predictStudyScore({
     confidence,
     evidence,
     components,
+    approximatedEvidenceCount: evidence.filter((item) => !item.exactReferenceYear).length,
+    excludedAttemptCount: subjectAttempts.length - linked.length,
   }
 }

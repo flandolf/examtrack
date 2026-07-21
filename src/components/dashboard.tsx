@@ -26,6 +26,8 @@ import {
   type AssessmentReference,
   type ExamAttempt,
 } from "@/lib/exam-data"
+import { getMistakeProgress } from "@/lib/mistake-review"
+import { buildFocusPriorities, buildSubjectOutlooks } from "@/lib/performance-insights"
 import type { Timetable } from "@/lib/timetable"
 import { PageHeader } from "@/components/page-header"
 import { UpcomingExamsCard } from "@/components/upcoming-exams-card"
@@ -43,6 +45,15 @@ const SubjectBenchmarkChart = lazy(() =>
 )
 const VcaaPercentileTrendChart = lazy(() =>
   import("@/components/vcaa-percentile-trend-chart").then((module) => ({ default: module.VcaaPercentileTrendChart })),
+)
+const ImprovementOutlookChart = lazy(() =>
+  import("@/components/improvement-outlook-chart").then((module) => ({ default: module.ImprovementOutlookChart })),
+)
+const FocusPriorityChart = lazy(() =>
+  import("@/components/focus-priority-chart").then((module) => ({ default: module.FocusPriorityChart })),
+)
+const ReviewForecastChart = lazy(() =>
+  import("@/components/review-forecast-chart").then((module) => ({ default: module.ReviewForecastChart })),
 )
 
 function formatDate(value: string) {
@@ -311,6 +322,57 @@ function StatRow({ data }: { data: AppData }) {
   )
 }
 
+function ImprovementSignals({ data }: { data: AppData }) {
+  const outlooks = useMemo(() => buildSubjectOutlooks(data.attempts), [data.attempts])
+  const priorities = useMemo(() => buildFocusPriorities(data.attempts, data.mistakes), [data.attempts, data.mistakes])
+  const review = useMemo(() => getMistakeProgress(data.mistakes), [data.mistakes])
+  const primary = [...outlooks].toSorted((first, second) => second.attempts - first.attempts)[0]
+  const topPriority = priorities[0]
+
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle>Performance signals</CardTitle>
+        <CardDescription>Leading indicators that show whether your study process is turning into stronger exam performance.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-border">
+          <div className="min-w-0 space-y-1 xl:pr-5">
+            <p className="text-sm text-muted-foreground">Recent momentum</p>
+            <p className="text-2xl font-semibold tabular-nums">
+              {primary ? `${primary.momentum >= 0 ? "+" : ""}${primary.momentum.toFixed(1)} pts` : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {primary ? `${primary.subject} · recent average vs prior evidence` : "Needs at least one logged attempt"}
+            </p>
+          </div>
+          <div className="min-w-0 space-y-1 xl:px-5">
+            <p className="text-sm text-muted-foreground">Score consistency</p>
+            <p className="text-2xl font-semibold tabular-nums">{primary ? `±${primary.spread.toFixed(1)} pts` : "—"}</p>
+            <p className="text-xs text-muted-foreground">
+              {primary ? `${primary.spread <= 5 ? "Stable" : primary.spread <= 10 ? "Some variation" : "High variation"} across the latest five ${primary.subject} papers` : "More attempts improve this signal"}
+            </p>
+          </div>
+          <div className="min-w-0 space-y-1 xl:px-5">
+            <p className="text-sm text-muted-foreground">Review recall</p>
+            <p className="text-2xl font-semibold tabular-nums">{review.recallRate === null ? "—" : `${review.recallRate.toFixed(0)}%`}</p>
+            <p className="text-xs text-muted-foreground">
+              {review.reviewsCompleted ? `${review.reviewsCompleted} reviews in 30 days${review.recallDelta === null ? "" : ` · ${review.recallDelta >= 0 ? "+" : ""}${review.recallDelta.toFixed(0)} pts`}` : "Complete mistake reviews to measure retention"}
+            </p>
+          </div>
+          <div className="min-w-0 space-y-1 xl:pl-5">
+            <p className="text-sm text-muted-foreground">Highest leverage</p>
+            <p className="truncate text-2xl font-semibold">{topPriority?.areaOfStudy ?? "—"}</p>
+            <p className="text-xs text-muted-foreground">
+              {topPriority ? `${topPriority.priorityScore.toFixed(0)}/100 priority · ${topPriority.missedMarks} marked opportunity marks` : "Label question areas to calculate a focus score"}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function SubjectBreakdown({ data, references }: { data: AppData; references: AssessmentReference[] }) {
   const breakdown = useMemo(() => computeSubjectBreakdown(data, references), [data, references])
   if (breakdown.length === 0) return null
@@ -543,6 +605,8 @@ export function Dashboard(props: DashboardProps) {
 
       <StatRow data={data} />
 
+      <ImprovementSignals data={data} />
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 lg:col-span-2">
           <Suspense fallback={<Skeleton className="h-96 w-full" />}>
@@ -563,7 +627,19 @@ export function Dashboard(props: DashboardProps) {
         </Suspense>
       </div>
 
-      <div className="min-w-0">
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+          <ImprovementOutlookChart attempts={data.attempts} />
+        </Suspense>
+        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+          <ReviewForecastChart mistakes={data.mistakes} />
+        </Suspense>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+          <FocusPriorityChart attempts={data.attempts} mistakes={data.mistakes} />
+        </Suspense>
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <RevisionPriorityChart mistakes={data.mistakes} />
         </Suspense>

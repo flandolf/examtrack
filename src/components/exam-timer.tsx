@@ -24,6 +24,7 @@ import { buildExamSuggestions, findLatestAttempt, type ExamSuggestion } from "@/
 import { formatTimer, getExamTimerState } from "@/lib/exam-timer"
 import { loadAppData } from "@/lib/storage"
 import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
+import type { VcaaStudyResources } from "@/lib/vcaa-resources"
 
 type TimerSession = {
   subject: string
@@ -43,6 +44,7 @@ export type ExamTimerPreset = Pick<TimerSession, "subject" | "provider" | "examY
 
 type ExamTimerProps = {
   references: AssessmentReference[]
+  studies: VcaaStudyResources[]
   preferredSubjects: string[]
   initialExam?: ExamTimerPreset | null
   onSave: (attempt: ExamAttempt) => void
@@ -67,7 +69,7 @@ function loadSession(): TimerSession | null {
   }
 }
 
-export function ExamTimer({ references, preferredSubjects, initialExam, onSave }: ExamTimerProps) {
+export function ExamTimer({ references, studies, preferredSubjects, initialExam, onSave }: ExamTimerProps) {
   const [session, setSession] = useState<TimerSession | null>(loadSession)
   const [subject, setSubject] = useState(initialExam?.subject ?? firstPreferredSubject(references.map((item) => item.studyName), preferredSubjects))
   const [provider, setProvider] = useState(initialExam?.provider ?? "VCAA")
@@ -85,8 +87,8 @@ export function ExamTimer({ references, preferredSubjects, initialExam, onSave }
   const [questionResults, setQuestionResults] = useState<QuestionResult[]>([])
   const history = useMemo(loadAppData, [])
   const suggestions = useMemo(
-    () => buildExamSuggestions(history.attempts, references, preferredSubjects),
-    [history.attempts, preferredSubjects, references],
+    () => buildExamSuggestions(history.attempts, references, preferredSubjects, 4, studies),
+    [history.attempts, preferredSubjects, references, studies],
   )
   const latestAttempt = useMemo(() => findLatestAttempt(history.attempts), [history.attempts])
   const now = useTickingNow(250)

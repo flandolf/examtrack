@@ -4,6 +4,7 @@ import {
   type AssessmentReference,
   type ExamAttempt,
 } from "@/lib/exam-data"
+import { getVcaaExamPaper, getVcaaExams, type VcaaStudyResources } from "@/lib/vcaa-resources"
 
 export type ExamSuggestion = {
   subject: string
@@ -44,6 +45,7 @@ export function buildExamSuggestions(
   references: AssessmentReference[],
   preferredSubjects: string[],
   limit = 4,
+  studies: VcaaStudyResources[] = [],
 ): ExamSuggestion[] {
   if (limit <= 0) return []
 
@@ -55,6 +57,23 @@ export function buildExamSuggestions(
       examYear: reference.year,
       paper: formatReferenceName(reference.name),
       marks: reference.maxScore,
+    }
+    const key = suggestionKey(suggestion)
+    if (!unique.has(key)) unique.set(key, suggestion)
+  }
+  for (const exam of getVcaaExams(studies)) {
+    if (exam.year === null) continue
+    const paper = getVcaaExamPaper(exam)
+    const fallbackReference = references.find((reference) =>
+      normaliseComparisonName(reference.studyName) === normaliseComparisonName(exam.studyName) &&
+      normaliseComparisonName(formatReferenceName(reference.name)) === normaliseComparisonName(paper)
+    )
+    const suggestion: ExamSuggestion = {
+      subject: exam.studyName,
+      provider: "VCAA",
+      examYear: exam.year,
+      paper,
+      marks: fallbackReference?.maxScore ?? 40,
     }
     const key = suggestionKey(suggestion)
     if (!unique.has(key)) unique.set(key, suggestion)
@@ -81,8 +100,14 @@ export function buildExamSuggestions(
   if (latest) {
     const latestSubject = normaliseComparisonName(latest.subject)
     const sameSubject = available.filter((item) => normaliseComparisonName(item.subject) === latestSubject)
+    const latestPaperOrder = paperOrder(latest.paper)
+    add(sameSubject.filter((item) =>
+      item.examYear === latest.examYear && paperOrder(item.paper) > latestPaperOrder
+    ).toSorted(byYearAscending))
     add(sameSubject.filter((item) => item.examYear > latest.examYear).toSorted(byYearAscending))
-    add(sameSubject.filter((item) => item.examYear === latest.examYear).toSorted(byYearAscending))
+    add(sameSubject.filter((item) =>
+      item.examYear === latest.examYear && paperOrder(item.paper) <= latestPaperOrder
+    ).toSorted(byYearAscending))
     add(sameSubject.filter((item) => item.examYear < latest.examYear).toSorted(byYearDescending))
   }
 

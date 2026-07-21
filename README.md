@@ -18,6 +18,8 @@ bun run dev
 
 Attempts, mistakes, review history, question-level results, timing evidence, and tracked official exams stay available in local storage and sync after email/password sign-in. Never put a secret or service-role key in the Vite environment variables.
 
+Mistake cards use a due-card study queue with Again, Hard, Good, and Easy ratings. Scheduling state is stored inside each mistake's synced JSON payload, so the feature does not require an additional database migration.
+
 Student data stays in browser storage. Use the app menu to export or import a validated JSON backup.
 Mistake photos sent to ChatGPT pass through the local server and are not saved by ExamTrack.
 

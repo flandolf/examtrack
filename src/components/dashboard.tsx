@@ -81,8 +81,7 @@ function pickNextAction(
     }
   }
 
-  const unresolved = data.mistakes.filter((mistake) => !mistake.resolved)
-  const due = getDueMistakes(unresolved)
+  const due = getDueMistakes(data.mistakes)
   if (due.length > 0) {
     const counts = new Map<string, number>()
     for (const mistake of due) counts.set(mistake.category, (counts.get(mistake.category) ?? 0) + 1)
@@ -97,8 +96,8 @@ function pickNextAction(
     const noun = topCount === 1 ? "mistake" : "mistakes"
     return {
       icon: Target,
-      title: `Review ${topCount} unresolved ${topCategory?.toLowerCase()} ${noun}`,
-      description: "Your most common category — resolving these tightens every future attempt you sit.",
+      title: `Review ${topCount} due ${topCategory?.toLowerCase()} ${noun}`,
+      description: "These cards are due in your spaced-repetition queue now.",
       cta: "Open Mistakes",
       onClick: handlers.onOpenMistakes,
     }
@@ -128,10 +127,11 @@ function pickNextAction(
     }
   }
   const weakestArea = buildCoverage(data.attempts)[0]
+  const scheduledCards = data.mistakes.filter((mistake) => !mistake.suspended).length
   return {
     icon: BookOpenCheck,
     title: "Sit another official-style paper",
-    description: weakestArea ? `Choose a paper that tests ${weakestArea.areaOfStudy}, currently your weakest marked area at ${weakestArea.percentage.toFixed(0)}%.` : unresolved.length ? `${unresolved.length} mistake${unresolved.length === 1 ? " is" : "s are"} scheduled for later. Build fresh evidence while you wait.` : "Use the exam library to choose your next paper and preserve timed conditions.",
+    description: weakestArea ? `Choose a paper that tests ${weakestArea.areaOfStudy}, currently your weakest marked area at ${weakestArea.percentage.toFixed(0)}%.` : scheduledCards ? `${scheduledCards} mistake card${scheduledCards === 1 ? " is" : "s are"} scheduled for later. Build fresh evidence while you wait.` : "Use the exam library to choose your next paper and preserve timed conditions.",
     cta: "Open exam library",
     onClick: handlers.onOpenLibrary,
   }
@@ -242,10 +242,10 @@ function NextActionNotice({ action }: { action: NextAction | null }) {
 
 function StatRow({ data }: { data: AppData }) {
   const stats = useMemo(() => computeStats(data.attempts), [data.attempts])
-  const resolved = data.mistakes.filter((mistake) => mistake.resolved).length
+  const mature = data.mistakes.filter((mistake) => mistake.resolved).length
   const total = data.mistakes.length
-  const unresolved = total - resolved
-  const completion = total ? (resolved / total) * 100 : 0
+  const due = getDueMistakes(data.mistakes).length
+  const completion = total ? (mature / total) * 100 : 0
 
   return (
     <div className="grid gap-5 rounded-lg border bg-card px-5 py-5 sm:grid-cols-2 sm:gap-y-6 lg:grid-cols-4 lg:gap-y-0 lg:divide-x lg:divide-border">
@@ -293,17 +293,17 @@ function StatRow({ data }: { data: AppData }) {
         <p className="text-xs text-muted-foreground">Your strongest recorded practice result</p>
       </div>
       <div className="flex min-w-0 flex-col gap-1.5 sm:pl-6">
-        <p className="text-sm text-muted-foreground">Mistakes</p>
+        <p className="text-sm text-muted-foreground">Mistake cards</p>
         <div className="flex items-baseline gap-2">
-          <p className="text-3xl font-semibold tabular-nums leading-none">{total === 0 ? "—" : unresolved}</p>
+          <p className="text-3xl font-semibold tabular-nums leading-none">{total === 0 ? "—" : due}</p>
           <p className="text-xs text-muted-foreground">
-            {total === 0 ? "none logged" : `unresolved of ${total}`}
+            {total === 0 ? "none logged" : `due of ${total}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Progress value={completion} className="w-24" />
           <span className="text-xs text-muted-foreground tabular-nums">
-            {total === 0 ? "0/0" : `${resolved}/${total} resolved`}
+            {total === 0 ? "0/0" : `${mature}/${total} mature`}
           </span>
         </div>
       </div>

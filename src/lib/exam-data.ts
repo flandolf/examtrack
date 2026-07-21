@@ -71,12 +71,17 @@ export type ExamTiming = {
   pausedSeconds: number
 }
 
-export type ReviewResult = "incorrect" | "assisted" | "correct"
+export type ReviewRating = "again" | "hard" | "good" | "easy"
+export type LegacyReviewResult = "incorrect" | "assisted" | "correct"
+export type ReviewResult = ReviewRating | LegacyReviewResult
+export type MistakeReviewState = "new" | "learning" | "review" | "relearning"
 
 export type MistakeReview = {
   id: string
   completedAt: string
   result: ReviewResult
+  intervalDays?: number
+  easeFactor?: number
 }
 
 export type Mistake = {
@@ -93,6 +98,13 @@ export type Mistake = {
   criterion?: string
   dueAt?: string | null
   reviewHistory?: MistakeReview[]
+  reviewState?: MistakeReviewState
+  intervalDays?: number
+  easeFactor?: number
+  repetitions?: number
+  lapses?: number
+  lastReviewedAt?: string
+  suspended?: boolean
   resolved: boolean
   createdAt: string
   updatedAt: string
@@ -140,25 +152,175 @@ export const EMPTY_APP_DATA: AppData = {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
+const MINUTE_MS = 60 * 1000
+const DEFAULT_EASE_FACTOR = 2.5
+const MINIMUM_EASE_FACTOR = 1.3
+
+export type MistakeSchedule = {
+  state: MistakeReviewState
+  dueAt: string
+  intervalDays: number
+  easeFactor: number
+  repetitions: number
+  lapses: number
+  resolved: boolean
+}
+
+export type MistakeReviewPreview = MistakeSchedule & {
+  rating: ReviewRating
+}
+
+function normalizeReviewRating(result: ReviewResult): ReviewRating {
+  if (result === "incorrect") return "again"
+  if (result === "assisted") return "hard"
+  if (result === "correct") return "good"
+  return result
+}
+
+function inferReviewState(mistake: Mistake): MistakeReviewState {
+  if (mistake.reviewState) return mistake.reviewState
+  const history = mistake.reviewHistory ?? []
+  if (!history.length) return mistake.resolved ? "review" : "new"
+  const latest = normalizeReviewRating(history.at(-1)!.result)
+  if (latest === "again") return history.length === 1 ? "learning" : "relearning"
+  if (mistake.resolved || history.filter((review) => ["good", "easy"].includes(normalizeReviewRating(review.result))).length >= 2) return "review"
+  return "learning"
+}
+
+function inferIntervalDays(mistake: Mistake): number {
+  if (typeof mistake.intervalDays === "number" && Number.isFinite(mistake.intervalDays) && mistake.intervalDays >= 0) return mistake.intervalDays
+  const latest = mistake.reviewHistory?.at(-1)
+  if (typeof latest?.intervalDays === "number" && Number.isFinite(latest.intervalDays) && latest.intervalDays >= 0) return latest.intervalDays
+  if (mistake.resolved) return 30
+  if (!latest) return 0
+  const rating = normalizeReviewRating(latest.result)
+  return rating === "again" ? 0 : rating === "hard" ? 1 : rating === "easy" ? 7 : 3
+}
+
+function inferCount(mistake: Mistake, key: "repetitions" | "lapses") {
+  const explicit = mistake[key]
+  if (typeof explicit === "number" && Number.isInteger(explicit) && explicit >= 0) return explicit
+  return (mistake.reviewHistory ?? []).filter((review) => {
+    const rating = normalizeReviewRating(review.result)
+    return key === "lapses" ? rating === "again" : rating !== "again"
+  }).length
+}
+
+export function getMistakeSchedule(mistake: Mistake): MistakeSchedule {
+  const state = inferReviewState(mistake)
+  const intervalDays = inferIntervalDays(mistake)
+  const easeFactor = typeof mistake.easeFactor === "number" && Number.isFinite(mistake.easeFactor)
+    ? Math.max(MINIMUM_EASE_FACTOR, mistake.easeFactor)
+    : DEFAULT_EASE_FACTOR
+  let dueAt = mistake.dueAt
+  if (!dueAt) {
+    const base = mistake.lastReviewedAt ?? mistake.reviewHistory?.at(-1)?.completedAt ?? mistake.updatedAt ?? mistake.createdAt
+    dueAt = new Date(new Date(base).getTime() + intervalDays * DAY_MS).toISOString()
+  }
+  return {
+    state,
+    dueAt,
+    intervalDays,
+    easeFactor,
+    repetitions: inferCount(mistake, "repetitions"),
+    lapses: inferCount(mistake, "lapses"),
+    resolved: mistake.resolved || state === "review" && intervalDays >= 21,
+  }
+}
+
+export function previewMistakeReview(
+  mistake: Mistake,
+  result: ReviewResult,
+  completedAt = new Date().toISOString(),
+): MistakeReviewPreview {
+  const rating = normalizeReviewRating(result)
+  const current = getMistakeSchedule(mistake)
+  let state: MistakeReviewState
+  let intervalDays: number
+  let easeFactor = current.easeFactor
+  let dueDelay = 0
+  let repetitions = current.repetitions
+  let lapses = current.lapses
+
+  if (rating === "again") {
+    state = current.state === "new" || current.state === "learning" ? "learning" : "relearning"
+    intervalDays = current.state === "review" ? Math.max(1, Math.round(current.intervalDays * 0.5)) : current.intervalDays
+    easeFactor = Math.max(MINIMUM_EASE_FACTOR, easeFactor - 0.2)
+    dueDelay = 10 * MINUTE_MS
+    lapses += 1
+  } else if (rating === "hard") {
+    state = current.state === "new" || current.state === "learning"
+      ? "learning"
+      : current.state === "relearning"
+        ? "relearning"
+        : "review"
+    intervalDays = state === "learning" || state === "relearning" ? 1 : Math.max(1, Math.round(Math.max(1, current.intervalDays) * 1.2))
+    easeFactor = Math.max(MINIMUM_EASE_FACTOR, easeFactor - 0.15)
+    dueDelay = intervalDays * DAY_MS
+    repetitions += 1
+  } else if (rating === "good") {
+    state = "review"
+    intervalDays = current.state === "new" || current.state === "learning"
+      ? 3
+      : current.state === "relearning"
+        ? Math.max(2, current.intervalDays)
+        : Math.max(current.intervalDays + 1, Math.round(Math.max(1, current.intervalDays) * easeFactor))
+    dueDelay = intervalDays * DAY_MS
+    repetitions += 1
+  } else {
+    state = "review"
+    intervalDays = current.state === "new" || current.state === "learning"
+      ? 7
+      : Math.max(7, Math.round(Math.max(1, current.intervalDays) * easeFactor * 1.3))
+    easeFactor += 0.15
+    dueDelay = intervalDays * DAY_MS
+    repetitions += 1
+  }
+
+  return {
+    rating,
+    state,
+    dueAt: new Date(new Date(completedAt).getTime() + dueDelay).toISOString(),
+    intervalDays,
+    easeFactor: Math.round(easeFactor * 100) / 100,
+    repetitions,
+    lapses,
+    resolved: state === "review" && intervalDays >= 21,
+  }
+}
 
 export function recordMistakeReview(
   mistake: Mistake,
   result: ReviewResult,
   completedAt = new Date().toISOString(),
 ): Mistake {
-  const history = [...(mistake.reviewHistory ?? []), { id: crypto.randomUUID(), completedAt, result }]
-  const correctStreak = history.toReversed().findIndex((review) => review.result !== "correct")
-  const consecutiveCorrect = correctStreak === -1 ? history.length : correctStreak
-  const resolved = consecutiveCorrect >= 2
-  const delayDays = result === "incorrect" ? 1 : result === "assisted" ? 3 : resolved ? 30 : 7
-  const dueAt = resolved ? null : new Date(new Date(completedAt).getTime() + delayDays * DAY_MS).toISOString()
-  return { ...mistake, reviewHistory: history, resolved, dueAt, updatedAt: completedAt }
+  const next = previewMistakeReview(mistake, result, completedAt)
+  const history = [...(mistake.reviewHistory ?? []), {
+    id: crypto.randomUUID(),
+    completedAt,
+    result: next.rating,
+    intervalDays: next.intervalDays,
+    easeFactor: next.easeFactor,
+  }]
+  return {
+    ...mistake,
+    reviewHistory: history,
+    reviewState: next.state,
+    intervalDays: next.intervalDays,
+    easeFactor: next.easeFactor,
+    repetitions: next.repetitions,
+    lapses: next.lapses,
+    lastReviewedAt: completedAt,
+    resolved: next.resolved,
+    dueAt: next.dueAt,
+    updatedAt: completedAt,
+  }
 }
 
 export function getDueMistakes(mistakes: Mistake[], now = new Date()): Mistake[] {
   const timestamp = now.getTime()
-  return mistakes.filter((mistake) => !mistake.resolved && (!mistake.dueAt || new Date(mistake.dueAt).getTime() <= timestamp))
-    .toSorted((first, second) => (first.dueAt ?? first.createdAt).localeCompare(second.dueAt ?? second.createdAt))
+  return mistakes.filter((mistake) => !mistake.suspended && new Date(getMistakeSchedule(mistake).dueAt).getTime() <= timestamp)
+    .toSorted((first, second) => getMistakeSchedule(first).dueAt.localeCompare(getMistakeSchedule(second).dueAt))
 }
 
 export type CoverageArea = {
@@ -597,6 +759,13 @@ export function isAppData(value: unknown): value is AppData {
         (mistake.criterion === undefined || typeof mistake.criterion === "string") &&
         (mistake.dueAt === undefined || mistake.dueAt === null || typeof mistake.dueAt === "string") &&
         (mistake.reviewHistory === undefined || Array.isArray(mistake.reviewHistory) && mistake.reviewHistory.every(isMistakeReview)) &&
+        (mistake.reviewState === undefined || ["new", "learning", "review", "relearning"].includes(mistake.reviewState)) &&
+        (mistake.intervalDays === undefined || typeof mistake.intervalDays === "number" && Number.isFinite(mistake.intervalDays) && mistake.intervalDays >= 0) &&
+        (mistake.easeFactor === undefined || typeof mistake.easeFactor === "number" && Number.isFinite(mistake.easeFactor) && mistake.easeFactor >= MINIMUM_EASE_FACTOR) &&
+        (mistake.repetitions === undefined || typeof mistake.repetitions === "number" && Number.isInteger(mistake.repetitions) && mistake.repetitions >= 0) &&
+        (mistake.lapses === undefined || typeof mistake.lapses === "number" && Number.isInteger(mistake.lapses) && mistake.lapses >= 0) &&
+        (mistake.lastReviewedAt === undefined || typeof mistake.lastReviewedAt === "string") &&
+        (mistake.suspended === undefined || typeof mistake.suspended === "boolean") &&
         typeof mistake.resolved === "boolean" &&
         typeof mistake.createdAt === "string" &&
         typeof mistake.updatedAt === "string"
@@ -654,7 +823,9 @@ function isExamTiming(value: unknown): value is ExamTiming {
 function isMistakeReview(value: unknown): value is MistakeReview {
   if (!isRecord(value)) return false
   return typeof value.id === "string" && typeof value.completedAt === "string" &&
-    ["incorrect", "assisted", "correct"].includes(String(value.result))
+    ["incorrect", "assisted", "correct", "again", "hard", "good", "easy"].includes(String(value.result)) &&
+    (value.intervalDays === undefined || typeof value.intervalDays === "number" && Number.isFinite(value.intervalDays) && value.intervalDays >= 0) &&
+    (value.easeFactor === undefined || typeof value.easeFactor === "number" && Number.isFinite(value.easeFactor) && value.easeFactor >= MINIMUM_EASE_FACTOR)
 }
 
 export function migrateAppData(value: unknown): AppData | null {

@@ -30,7 +30,8 @@ export function parseStudyResources(html) {
     const label = link.label.replace(/\([^)]*\b(?:KB|MB)\b[^)]*\)/gi, "").trim()
     const lower = label.toLowerCase()
     const urlLower = decodeURIComponent(link.url).toLowerCase()
-    const kind = /specification/.test(lower) ? "specification"
+    const kind = /\btranscript\b/.test(lower) ? "other"
+      : /specification/.test(lower) ? "specification"
       : /report|assessment guide|criteria|expected qualities|\badvice\b/.test(lower) || /examrep|assessrep/.test(urlLower) ? "report"
       : /sample|answer book|answer sheet/.test(lower) ? "sample"
       : /exam|examination/.test(lower) ? "exam"

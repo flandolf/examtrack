@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { analyseAttempt, analyseScore, buildAttemptBenchmarks, buildCoverage, buildSubjectBenchmarks, buildVcaaYearInsights, computeDistributionStats, findAttemptReferenceForYear, formatExamTitle, getAttemptPoints, getDueMistakes, isAppData, matchesAttemptReference, migrateAppData, recordMistakeReview, removeAttempt, validateAttempt, validateMistakeMarks, type AssessmentReference, type ExamAttempt, type Mistake } from "../src/lib/exam-data"
+import { analyseAttempt, analyseScore, buildAttemptBenchmarks, buildCoverage, buildSubjectBenchmarks, buildVcaaYearInsights, computeDistributionStats, findAttemptReferenceForYear, formatExamTitle, getAttemptPoints, getDueMistakes, getMistakeSchedule, isAppData, matchesAttemptReference, migrateAppData, previewMistakeReview, recordMistakeReview, removeAttempt, validateAttempt, validateMistakeMarks, type AssessmentReference, type ExamAttempt, type Mistake } from "../src/lib/exam-data"
 import { parseAppDataFile } from "../src/lib/storage"
 import { buildTimetableCalendar, suggestTimetableForAttempt, type Timetable, type TimetableEntry } from "../src/lib/timetable"
 
@@ -203,10 +203,12 @@ describe("exam analysis", () => {
 
     expect(isAppData(data)).toBe(true)
     expect(isAppData({ ...data, mistakes: [{ ...mistake, questionText: "Differentiate $e^{2x}$." }] })).toBe(true)
+    expect(isAppData({ ...data, mistakes: [{ ...mistake, reviewState: "review", intervalDays: 8, easeFactor: 2.5, repetitions: 2, lapses: 1, lastReviewedAt: attempt.updatedAt, suspended: false }] })).toBe(true)
     expect(isAppData({ ...data, mistakes: [{ ...mistake, questionText: 42 }] })).toBe(false)
+    expect(isAppData({ ...data, mistakes: [{ ...mistake, reviewState: "forgotten" }] })).toBe(false)
   })
 
-  test("builds outcome coverage and schedules evidence-based mistake reviews", () => {
+  test("builds outcome coverage and schedules Anki-style mistake reviews", () => {
     expect(buildCoverage([{ ...attempt, questionResults: [
       { id: "q1", label: "1a", marksAwarded: 2, maxMarks: 4, confidence: "low", areaOfStudy: "Calculus" },
       { id: "q2", label: "1b", marksAwarded: 3, maxMarks: 3, confidence: "high", areaOfStudy: "Calculus" },
@@ -216,11 +218,37 @@ describe("exam analysis", () => {
       id: "m1", attemptId: attempt.id, question: "1a", category: "Concept", explanation: "Missed rule", correction: "Apply rule",
       resolved: false, createdAt: "2026-07-15T00:00:00.000Z", updatedAt: "2026-07-15T00:00:00.000Z",
     }
-    const first = recordMistakeReview(mistake, "correct", "2026-07-15T00:00:00.000Z")
-    const mastered = recordMistakeReview(first, "correct", "2026-07-22T00:00:00.000Z")
-    expect(first).toMatchObject({ resolved: false, dueAt: "2026-07-22T00:00:00.000Z" })
-    expect(mastered).toMatchObject({ resolved: true, dueAt: null })
-    expect(getDueMistakes([first], new Date("2026-07-22T00:00:00.000Z"))).toHaveLength(1)
+    const reviewedAt = "2026-07-15T00:00:00.000Z"
+    expect(previewMistakeReview(mistake, "again", reviewedAt)).toMatchObject({ state: "learning", dueAt: "2026-07-15T00:10:00.000Z", intervalDays: 0 })
+    expect(previewMistakeReview(mistake, "hard", reviewedAt)).toMatchObject({ state: "learning", dueAt: "2026-07-16T00:00:00.000Z", intervalDays: 1 })
+    expect(previewMistakeReview(mistake, "good", reviewedAt)).toMatchObject({ state: "review", dueAt: "2026-07-18T00:00:00.000Z", intervalDays: 3 })
+    expect(previewMistakeReview(mistake, "easy", reviewedAt)).toMatchObject({ state: "review", dueAt: "2026-07-22T00:00:00.000Z", intervalDays: 7 })
+
+    const first = recordMistakeReview(mistake, "good", reviewedAt)
+    const second = recordMistakeReview(first, "good", "2026-07-18T00:00:00.000Z")
+    const third = recordMistakeReview(second, "good", "2026-07-26T00:00:00.000Z")
+    const mature = recordMistakeReview(third, "good", "2026-08-15T00:00:00.000Z")
+    expect(first).toMatchObject({ resolved: false, reviewState: "review", intervalDays: 3, dueAt: "2026-07-18T00:00:00.000Z" })
+    expect(mature).toMatchObject({ resolved: true, reviewState: "review", intervalDays: 50, dueAt: "2026-10-04T00:00:00.000Z" })
+    expect(mature.reviewHistory?.at(-1)).toMatchObject({ result: "good", intervalDays: 50, easeFactor: 2.5 })
+    expect(getDueMistakes([first], new Date("2026-07-18T00:00:00.000Z"))).toHaveLength(1)
+
+    const lapsed = recordMistakeReview(mature, "again", "2026-10-04T00:00:00.000Z")
+    expect(lapsed).toMatchObject({ resolved: false, reviewState: "relearning", intervalDays: 25, dueAt: "2026-10-04T00:10:00.000Z", lapses: 1 })
+    expect(previewMistakeReview(lapsed, "hard", "2026-10-04T00:10:00.000Z")).toMatchObject({ resolved: false, state: "relearning", intervalDays: 1, dueAt: "2026-10-05T00:10:00.000Z" })
+  })
+
+  test("keeps legacy mastered cards in the long-term review schedule", () => {
+    const legacy: Mistake = {
+      id: "legacy", attemptId: attempt.id, question: "2", category: "Concept", explanation: "Missed rule", correction: "Apply rule",
+      resolved: true, dueAt: null, reviewHistory: [
+        { id: "r1", completedAt: "2026-06-01T00:00:00.000Z", result: "correct" },
+        { id: "r2", completedAt: "2026-06-08T00:00:00.000Z", result: "correct" },
+      ],
+      createdAt: "2026-06-01T00:00:00.000Z", updatedAt: "2026-06-08T00:00:00.000Z",
+    }
+    expect(getMistakeSchedule(legacy)).toMatchObject({ state: "review", intervalDays: 30, dueAt: "2026-07-08T00:00:00.000Z", resolved: true })
+    expect(getDueMistakes([legacy], new Date("2026-07-08T00:00:00.000Z"))).toEqual([legacy])
   })
 })
 

@@ -4918,13 +4918,13 @@
         {
           "label": "Mathematics Methods Examination 1 transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/VCE_Mathematical_Methods_Exam_1.docx",
-          "kind": "exam",
+          "kind": "other",
           "year": 2025
         },
         {
           "label": "Mathematics Methods Examination 2 transcript",
           "url": "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/Mathematics_Methods_Examination_2.docx",
-          "kind": "exam",
+          "kind": "other",
           "year": 2025
         },
         {

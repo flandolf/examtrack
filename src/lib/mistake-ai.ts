@@ -117,6 +117,11 @@ function mistakeContext(mistakes: Mistake[], attempts: ExamAttempt[]) {
     marksLost: mistake.marksLost,
     totalMarks: mistake.totalMarks,
     resolved: mistake.resolved,
+    reviewState: mistake.reviewState,
+    dueAt: mistake.dueAt,
+    intervalDays: mistake.intervalDays,
+    lapses: mistake.lapses,
+    suspended: mistake.suspended,
     reviews: mistake.reviewHistory?.map(({ result }) => result),
   }))
 }

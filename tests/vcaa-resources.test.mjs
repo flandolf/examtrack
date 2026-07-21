@@ -11,6 +11,16 @@ test("parses VCAA study pages and classifies official resources", () => {
     ])
 })
 
+test("does not classify presentation transcripts as exam papers", () => {
+  expect(parseStudyResources('<a href="/sites/default/files/2025-04/VCE_Mathematical_Methods_Exam_1.docx">Mathematics Methods Examination 1 transcript</a>'))
+    .toEqual([{
+      label: "Mathematics Methods Examination 1 transcript",
+      url: "https://www.vcaa.vic.edu.au/sites/default/files/2025-04/VCE_Mathematical_Methods_Exam_1.docx",
+      kind: "other",
+      year: 2025,
+    }])
+})
+
 test("recovers archive years from URLs and does not classify assessment reports as exams", () => {
   expect(parseStudyResources('<a href="/Documents/exams/philosophy/2006philos-w.pdf">Exam</a><a href="/Documents/exams/philosophy/philosophy_assessrep_06.pdf">Exam</a>'))
     .toEqual([

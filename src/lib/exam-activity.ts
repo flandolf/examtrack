@@ -65,7 +65,6 @@ export function buildExamActivity(
   const gridStartDate = addDays(rangeStartDate, -rangeStartDate.getUTCDay())
   const dayCount = Math.ceil((rangeEndDate.getTime() - gridStartDate.getTime() + DAY_MS) / DAY_MS)
   const weekCount = Math.ceil(dayCount / DAYS_IN_WEEK)
-  const gridEndDate = addDays(gridStartDate, weekCount * DAYS_IN_WEEK - 1)
   const rangeStart = formatDate(rangeStartDate)
   const rangeEnd = formatDate(rangeEndDate)
   const counts = new Map<string, number>()

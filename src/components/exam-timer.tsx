@@ -20,7 +20,9 @@ import { PageHeader } from "@/components/page-header"
 import { QuestionResultsEditor } from "@/components/question-results-editor"
 import { useTickingNow } from "@/hooks/use-ticking-now"
 import { formatExamTitle, formatReferenceName, validateAttempt, validateQuestionResults, type AssessmentReference, type ExamAttempt, type QuestionResult } from "@/lib/exam-data"
+import { buildExamSuggestions, findLatestAttempt, type ExamSuggestion } from "@/lib/exam-suggestions"
 import { formatTimer, getExamTimerState } from "@/lib/exam-timer"
+import { loadAppData } from "@/lib/storage"
 import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
 
 type TimerSession = {
@@ -81,6 +83,12 @@ export function ExamTimer({ references, preferredSubjects, initialExam, onSave }
   const [completedAt, setCompletedAt] = useState(today)
   const [markingError, setMarkingError] = useState<string | null>(null)
   const [questionResults, setQuestionResults] = useState<QuestionResult[]>([])
+  const history = useMemo(loadAppData, [])
+  const suggestions = useMemo(
+    () => buildExamSuggestions(history.attempts, references, preferredSubjects),
+    [history.attempts, preferredSubjects, references],
+  )
+  const latestAttempt = useMemo(() => findLatestAttempt(history.attempts), [history.attempts])
   const now = useTickingNow(250)
 
   const subjects = useMemo(() => prioritiseSubjects(references.map((item) => item.studyName), preferredSubjects), [preferredSubjects, references])
@@ -93,6 +101,15 @@ export function ExamTimer({ references, preferredSubjects, initialExam, onSave }
   const timer = useMemo(() => session
     ? getExamTimerState(session.pausedAt ?? now.getTime(), session.startedAt, session.readingMinutes, session.writingMinutes, session.marks)
     : null, [now, session])
+
+  function applySuggestion(suggestion: ExamSuggestion) {
+    setSubject(suggestion.subject)
+    setProvider(suggestion.provider)
+    setExamYear(suggestion.examYear)
+    setPaper(suggestion.paper)
+    setMarks(suggestion.marks)
+    setRawMax(suggestion.marks)
+  }
 
   function start(event: FormEvent) {
     event.preventDefault()
@@ -190,6 +207,37 @@ export function ExamTimer({ references, preferredSubjects, initialExam, onSave }
     return (
       <div className="grid gap-6">
         <PageHeader title="Exam timer" description="Choose an exam, set the conditions, then begin when your paper is ready." />
+        {suggestions.length ? (
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle>Suggested next exams</CardTitle>
+              <CardDescription>
+                {latestAttempt
+                  ? `Based on your latest logged paper: ${latestAttempt.examYear} ${latestAttempt.subject} · ${latestAttempt.paper}.`
+                  : "Based on your preferred subjects and the available VCAA references."}
+                {" "}Choose one to fill the setup form.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {suggestions.map((suggestion) => (
+                <Button
+                  key={`${suggestion.subject}-${suggestion.examYear}-${suggestion.paper}`}
+                  type="button"
+                  variant="outline"
+                  className="h-auto justify-start whitespace-normal px-4 py-3 text-left"
+                  onClick={() => applySuggestion(suggestion)}
+                >
+                  <span className="grid gap-1">
+                    <span className="font-medium">{suggestion.subject}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {suggestion.examYear} · {suggestion.paper} · {suggestion.marks} marks
+                    </span>
+                  </span>
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
         <Card className="w-full">
           <CardHeader>
             <CardTitle>Set up your exam</CardTitle>

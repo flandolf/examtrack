@@ -284,7 +284,6 @@ export default function App() {
       completedExamIdsUpdatedAt: new Date().toISOString(),
     }))
   }
-
   function saveMistake(mistake: Mistake) {
     setData((current) => ({
       ...current,

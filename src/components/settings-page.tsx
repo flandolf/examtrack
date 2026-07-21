@@ -33,7 +33,6 @@ function getModelAccent(model: string) {
   if (model.endsWith("-luna")) return "var(--chart-3)"
   return "var(--chart-2)"
 }
-
 export function SettingsPage({ sync, subjects, selectedSubjects, onSubjectsChange }: {
   sync: ReturnType<typeof useSupabaseSync>
   subjects: string[]

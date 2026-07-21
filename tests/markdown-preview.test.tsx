@@ -26,3 +26,14 @@ test("renders inline assessment criteria without the preview card", () => {
   expect(markup).toContain("katex")
   expect(markup).not.toContain("rounded-lg")
 })
+
+test("renders compact mistake-card LaTeX with set notation and fractions", () => {
+  const markup = renderToStaticMarkup(
+    <MarkdownPreview inline>{"$f:\\mathbb{R}\\to\\mathbb{R}$, where $\\displaystyle f(x)=\\frac{1}{27}(ax-1)^3(b-3x)+1$."}</MarkdownPreview>,
+  )
+
+  expect(markup).toContain("katex")
+  expect(markup).toContain("mathbb")
+  expect(markup).toContain("mfrac")
+  expect(markup).not.toContain("$f:")
+})

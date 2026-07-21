@@ -227,7 +227,9 @@ function BrowseCard({ mistake, attempt, studies, onEdit, onToggleSuspend, onDele
         </div>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <p className="line-clamp-3 text-sm">{mistake.questionText?.trim() || mistake.question}</p>
+        <div className="line-clamp-3 text-sm">
+          <MarkdownPreview inline>{mistake.questionText?.trim() || mistake.question}</MarkdownPreview>
+        </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span>{mistake.suspended ? "Not in queue" : isDue ? "Due now" : `Due ${formatDueDate(schedule.dueAt)}`}</span>
           <span>Interval {schedule.intervalDays ? `${schedule.intervalDays}d` : "—"}</span>

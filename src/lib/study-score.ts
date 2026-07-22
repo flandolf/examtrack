@@ -1,14 +1,17 @@
 import {
   analyseAttempt,
-  findAttemptReference,
+  normaliseComparisonName,
   type AssessmentReference,
   type ExamAttempt,
 } from "@/lib/exam-data"
+import { normaliseScalingStudyName } from "@/lib/scaling"
 
 export type StudyScoreEvidence = {
   attempt: ExamAttempt
   percentile: number
   weight: number
+  referenceYear: number
+  exactReferenceYear: boolean
 }
 
 export type StudyScoreComponent = {
@@ -31,7 +34,11 @@ export type StudyScorePrediction = {
   confidence: "Low" | "Medium" | "High"
   evidence: StudyScoreEvidence[]
   components: StudyScoreComponent[]
+  approximatedEvidenceCount: number
+  excludedAttemptCount: number
 }
+
+type UnweightedEvidence = Omit<StudyScoreEvidence, "weight">
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value))
@@ -82,7 +89,44 @@ function paperNumber(paper: string): 1 | 2 | null {
   return match?.[1] === "1" ? 1 : match?.[1] === "2" ? 2 : null
 }
 
-function weightEvidence(items: Array<{ attempt: ExamAttempt; percentile: number }>): StudyScoreEvidence[] {
+function sameStudy(first: string, second: string) {
+  return normaliseScalingStudyName(first) === normaliseScalingStudyName(second)
+}
+
+function compatibleReferences(attempt: ExamAttempt, references: AssessmentReference[]) {
+  const subjectReferences = references.filter((reference) => sameStudy(reference.studyName, attempt.subject))
+  const paper = normaliseComparisonName(attempt.paper)
+  const paperMatches = subjectReferences.filter(
+    (reference) => normaliseComparisonName(reference.name) === paper,
+  )
+  if (paperMatches.length) return paperMatches
+
+  const countByYear = new Map<number, number>()
+  for (const reference of subjectReferences) {
+    countByYear.set(reference.year, (countByYear.get(reference.year) ?? 0) + 1)
+  }
+  return subjectReferences.filter((reference) => countByYear.get(reference.year) === 1)
+}
+
+function findStudyScoreReference(attempt: ExamAttempt, references: AssessmentReference[]) {
+  const candidates = compatibleReferences(attempt, references)
+  if (candidates.length === 0) return undefined
+
+  const exact = candidates.find((reference) => reference.year === attempt.examYear)
+  if (exact) return exact
+
+  const explicitlyLinked = attempt.referenceId
+    ? candidates.find((reference) => reference.id === attempt.referenceId)
+    : undefined
+  if (explicitlyLinked) return explicitlyLinked
+
+  return candidates.toSorted((first, second) =>
+    Math.abs(first.year - attempt.examYear) - Math.abs(second.year - attempt.examYear) ||
+    second.year - first.year
+  )[0]
+}
+
+function weightEvidence(items: UnweightedEvidence[]): StudyScoreEvidence[] {
   return items
     .toSorted((first, second) => first.attempt.completedAt.localeCompare(second.attempt.completedAt))
     .map((item, index) => ({
@@ -124,14 +168,18 @@ export function predictStudyScore({
   sacPercentile?: number | null
   examWeightPercent?: number
 }): StudyScorePrediction | null {
-  const linked = attempts
-    .filter((attempt) => attempt.subject === subject)
-    .flatMap((attempt) => {
-      const reference = findAttemptReference(attempt, references)
-      if (!reference) return []
-      const percentile = analyseAttempt(attempt, reference).percentile
-      return percentile === null ? [] : [{ attempt, percentile }]
-    })
+  const subjectAttempts = attempts.filter((attempt) => sameStudy(attempt.subject, subject))
+  const linked = subjectAttempts.flatMap((attempt) => {
+    const reference = findStudyScoreReference(attempt, references)
+    if (!reference) return []
+    const percentile = analyseAttempt(attempt, reference).percentile
+    return percentile === null ? [] : [{
+      attempt,
+      percentile,
+      referenceYear: reference.year,
+      exactReferenceYear: reference.year === attempt.examYear,
+    }]
+  })
 
   if (linked.length === 0) return null
 
@@ -213,5 +261,7 @@ export function predictStudyScore({
     confidence,
     evidence,
     components,
+    approximatedEvidenceCount: evidence.filter((item) => !item.exactReferenceYear).length,
+    excludedAttemptCount: subjectAttempts.length - linked.length,
   }
 }

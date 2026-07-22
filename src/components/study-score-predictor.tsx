@@ -73,6 +73,9 @@ export function StudyScorePredictor({
     ) : null,
     [prediction, scalingReferences, scalingYear, subject],
   )
+  const recordedAttemptCount = prediction
+    ? prediction.evidence.length + prediction.excludedAttemptCount
+    : 0
 
   return (
     <div className="grid gap-8">
@@ -158,7 +161,7 @@ export function StudyScorePredictor({
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <CardTitle>Predicted raw study score</CardTitle>
-                        <CardDescription>Based on {prediction.evidence.length} officially linked attempt{prediction.evidence.length === 1 ? "" : "s"}.</CardDescription>
+                        <CardDescription>Based on {prediction.evidence.length} of {recordedAttemptCount} recorded attempt{recordedAttemptCount === 1 ? "" : "s"}.</CardDescription>
                       </div>
                       <Badge variant="outline">{prediction.confidence} confidence</Badge>
                     </div>
@@ -216,15 +219,28 @@ export function StudyScorePredictor({
                 <Card>
                   <CardHeader>
                     <CardTitle>Evidence used</CardTitle>
-                    <CardDescription>Recent attempts carry more weight; smaller or less consistent samples produce a wider likely range.</CardDescription>
+                    <CardDescription>Recent attempts carry more weight. When an exact-year distribution is unavailable, the nearest compatible VCAA distribution is used.</CardDescription>
                   </CardHeader>
                   <CardContent>
+                    {prediction.approximatedEvidenceCount > 0 || prediction.excludedAttemptCount > 0 ? (
+                      <div className="mb-3 grid gap-1 rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                        {prediction.approximatedEvidenceCount > 0 ? (
+                          <p>{prediction.approximatedEvidenceCount} attempt{prediction.approximatedEvidenceCount === 1 ? " uses" : "s use"} another year&apos;s distribution because its exact exam-year distribution is unavailable.</p>
+                        ) : null}
+                        {prediction.excludedAttemptCount > 0 ? (
+                          <p>{prediction.excludedAttemptCount} attempt{prediction.excludedAttemptCount === 1 ? " could" : "s could"} not be matched to any compatible distribution and {prediction.excludedAttemptCount === 1 ? "is" : "are"} excluded.</p>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <ul className="divide-y rounded-lg border">
-                      {[...prediction.evidence].reverse().map(({ attempt, percentile, weight }) => (
+                      {[...prediction.evidence].reverse().map(({ attempt, percentile, weight, referenceYear, exactReferenceYear }) => (
                         <li key={attempt.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium">{attempt.title} · {attempt.paper}</p>
-                            <p className="text-xs text-muted-foreground">{attempt.completedAt} · {(attempt.rawScore / attempt.rawMax * 100).toFixed(1)}%</p>
+                            <p className="text-xs text-muted-foreground">
+                              {attempt.completedAt} · {(attempt.rawScore / attempt.rawMax * 100).toFixed(1)}%
+                              {!exactReferenceYear ? ` · using ${referenceYear} distribution` : ""}
+                            </p>
                           </div>
                           <span className="text-sm font-medium tabular-nums">{percentile.toFixed(0)}th percentile</span>
                           <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">{(weight * 100).toFixed(0)}% weight</span>

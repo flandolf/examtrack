@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { buildExamSuggestions } from "../src/lib/exam-suggestions"
+import { buildCompanyExamSuggestions, buildExamSuggestions } from "../src/lib/exam-suggestions"
 import type { AssessmentReference, ExamAttempt } from "../src/lib/exam-data"
 import type { VcaaStudyResources } from "../src/lib/vcaa-resources"
 
@@ -94,6 +94,42 @@ describe("next exam suggestions", () => {
       expect.objectContaining({ examYear: 2013, paper: "Exam 1" }),
       expect.objectContaining({ examYear: 2013, paper: "Exam 2" }),
       expect.objectContaining({ examYear: 2021, paper: "Exam 1" }),
+    ])
+  })
+})
+
+describe("company exam progression", () => {
+  test("finishes the current provider before advancing from easier to harder companies", () => {
+    const latest = attempt({ provider: "TSSM", title: "TSSM 2011 Mathematical Methods", paper: "Exam 1" })
+    expect(buildCompanyExamSuggestions([latest], references, ["Mathematical Methods"])).toEqual([
+      expect.objectContaining({ provider: "TSSM", examYear: 2011, paper: "Exam 2", marks: 80 }),
+      expect.objectContaining({ provider: "Heffernan", examYear: 2011, paper: "Exam 1", marks: 40 }),
+      expect.objectContaining({ provider: "Heffernan", examYear: 2011, paper: "Exam 2", marks: 80 }),
+      expect.objectContaining({ provider: "Insight", examYear: 2011, paper: "Exam 1", marks: 40 }),
+    ])
+  })
+
+  test("moves directly to the next company after the current paper set is complete", () => {
+    const first = attempt({ id: "tssm-1", provider: "TSSM", title: "TSSM 2011 Mathematical Methods", paper: "Exam 1", completedAt: "2026-07-18" })
+    const second = attempt({ id: "tssm-2", provider: "TSSM", title: "TSSM 2011 Mathematical Methods", paper: "Exam 2" })
+    expect(buildCompanyExamSuggestions([first, second], references, ["Mathematical Methods"], undefined, 2)).toEqual([
+      expect.objectContaining({ provider: "Heffernan", paper: "Exam 1" }),
+      expect.objectContaining({ provider: "Heffernan", paper: "Exam 2" }),
+    ])
+  })
+
+  test("skips company papers already logged", () => {
+    const tssm = attempt({ id: "tssm-2", provider: "TSSM", title: "TSSM 2011 Mathematical Methods", paper: "Exam 2", completedAt: "2026-07-19" })
+    const heffernanOne = attempt({ id: "heffernan-1", provider: "Heffernan", title: "Heffernan 2011 Mathematical Methods", paper: "Exam 1", completedAt: "2026-07-20" })
+    expect(buildCompanyExamSuggestions([tssm, heffernanOne], references, ["Mathematical Methods"], undefined, 2)).toEqual([
+      expect.objectContaining({ provider: "Heffernan", paper: "Exam 2" }),
+      expect.objectContaining({ provider: "Insight", paper: "Exam 1" }),
+    ])
+  })
+
+  test("starts a new progression at the easiest configured company", () => {
+    expect(buildCompanyExamSuggestions([], references, ["Mathematical Methods"], undefined, 1)).toEqual([
+      expect.objectContaining({ provider: "TSSM", paper: "Exam 1" }),
     ])
   })
 })

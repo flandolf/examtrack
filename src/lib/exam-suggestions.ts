@@ -5,10 +5,15 @@ import {
   type ExamAttempt,
 } from "@/lib/exam-data"
 import { getVcaaExamPaper, getVcaaExams, type VcaaStudyResources } from "@/lib/vcaa-resources"
+import {
+  identifyDifficultyProvider,
+  resolveDifficultySettings,
+  type ExamDifficultySettings,
+} from "@/lib/exam-difficulty"
 
 export type ExamSuggestion = {
   subject: string
-  provider: "VCAA"
+  provider: string
   examYear: number
   paper: string
   marks: number
@@ -18,8 +23,17 @@ function paperOrder(paper: string) {
   return Number(paper.match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER)
 }
 
-function suggestionKey(suggestion: Pick<ExamSuggestion, "subject" | "examYear" | "paper">) {
-  return `${normaliseComparisonName(suggestion.subject)}\u0000${suggestion.examYear}\u0000${normaliseComparisonName(suggestion.paper)}`
+function suggestionKey(suggestion: Pick<ExamSuggestion, "subject" | "provider" | "examYear" | "paper">) {
+  return `${normaliseComparisonName(suggestion.subject)}\u0000${normaliseComparisonName(suggestion.provider)}\u0000${suggestion.examYear}\u0000${normaliseComparisonName(suggestion.paper)}`
+}
+
+function isCompanySuggestionLogged(suggestion: ExamSuggestion, attempts: ExamAttempt[]) {
+  return attempts.some((attempt) =>
+    attempt.examYear === suggestion.examYear &&
+    identifyDifficultyProvider(attempt) === suggestion.provider &&
+    normaliseComparisonName(attempt.subject) === normaliseComparisonName(suggestion.subject) &&
+    normaliseComparisonName(attempt.paper) === normaliseComparisonName(suggestion.paper),
+  )
 }
 
 function isLogged(suggestion: ExamSuggestion, attempts: ExamAttempt[]) {
@@ -120,4 +134,84 @@ export function buildExamSuggestions(
   ))
 
   return chosen
+}
+
+function getCompanyPaperTemplates(
+  subject: string,
+  examYear: number,
+  references: AssessmentReference[],
+  latest: ExamAttempt | null,
+) {
+  const subjectReferences = references.filter((reference) =>
+    normaliseComparisonName(reference.studyName) === normaliseComparisonName(subject),
+  )
+  const templateYear = subjectReferences.some((reference) => reference.year === examYear)
+    ? examYear
+    : Math.max(...subjectReferences.map((reference) => reference.year), 0)
+  const templates = new Map<string, { paper: string; marks: number }>()
+  for (const reference of subjectReferences.filter((reference) => reference.year === templateYear)) {
+    const paper = formatReferenceName(reference.name)
+    templates.set(normaliseComparisonName(paper), { paper, marks: reference.maxScore })
+  }
+  if (!templates.size) {
+    const latestPaperNumber = latest ? paperOrder(latest.paper) : Number.MAX_SAFE_INTEGER
+    if (Number.isFinite(latestPaperNumber) && latestPaperNumber !== Number.MAX_SAFE_INTEGER) {
+      templates.set("exam 1", { paper: "Exam 1", marks: latest?.rawMax ?? 40 })
+      templates.set("exam 2", { paper: "Exam 2", marks: latest?.rawMax ?? 40 })
+    } else {
+      templates.set("exam", { paper: "Exam", marks: latest?.rawMax ?? 40 })
+    }
+  }
+  return [...templates.values()].toSorted((first, second) =>
+    paperOrder(first.paper) - paperOrder(second.paper) || first.paper.localeCompare(second.paper),
+  )
+}
+
+export function buildCompanyExamSuggestions(
+  attempts: ExamAttempt[],
+  references: AssessmentReference[],
+  preferredSubjects: string[],
+  settings?: ExamDifficultySettings,
+  limit = 4,
+): ExamSuggestion[] {
+  if (limit <= 0) return []
+  const latest = findLatestAttempt(attempts)
+  const subject = latest?.subject || preferredSubjects.find((preferred) => references.some((reference) =>
+    normaliseComparisonName(reference.studyName) === normaliseComparisonName(preferred),
+  )) || references[0]?.studyName
+  if (!subject) return []
+
+  const examYear = latest?.examYear ?? new Date().getFullYear()
+  // Settings stores difficulty hardest -> easiest; a practice progression should
+  // run in the opposite direction so students build towards the hardest papers.
+  const providers = resolveDifficultySettings(settings).providerOrder.filter((provider) =>
+    provider !== "VCAA" && provider !== "VCAA NHT",
+  ).toReversed()
+  if (!providers.length) return []
+
+  const relevantCompanyAttempts = attempts.filter((attempt) =>
+    attempt.examYear === examYear &&
+    normaliseComparisonName(attempt.subject) === normaliseComparisonName(subject) &&
+    providers.includes(identifyDifficultyProvider(attempt) ?? ""),
+  )
+  const latestCompany = findLatestAttempt(relevantCompanyAttempts)
+  const latestProvider = latestCompany ? identifyDifficultyProvider(latestCompany) : null
+  const startIndex = latestProvider ? Math.max(0, providers.indexOf(latestProvider)) : 0
+  const providerSequence = [...providers.slice(startIndex), ...providers.slice(0, startIndex)]
+  const papers = getCompanyPaperTemplates(subject, examYear, references, latest)
+  const suggestions: ExamSuggestion[] = []
+
+  for (const company of providerSequence) {
+    const isCurrentCompany = company === latestProvider
+    const latestPaperRank = isCurrentCompany && latestCompany ? paperOrder(latestCompany.paper) : -1
+    for (const template of papers) {
+      if (isCurrentCompany && paperOrder(template.paper) <= latestPaperRank) continue
+      const suggestion: ExamSuggestion = { subject, provider: company, examYear, ...template }
+      if (isCompanySuggestionLogged(suggestion, attempts)) continue
+      suggestions.push(suggestion)
+      if (suggestions.length >= limit) return suggestions
+    }
+  }
+
+  return suggestions
 }

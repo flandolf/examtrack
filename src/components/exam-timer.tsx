@@ -20,7 +20,7 @@ import { PageHeader } from "@/components/page-header"
 import { QuestionResultsEditor } from "@/components/question-results-editor"
 import { useTickingNow } from "@/hooks/use-ticking-now"
 import { formatExamTitle, formatReferenceName, validateAttempt, validateQuestionResults, type AssessmentReference, type ExamAttempt, type QuestionResult } from "@/lib/exam-data"
-import { buildExamSuggestions, findLatestAttempt, type ExamSuggestion } from "@/lib/exam-suggestions"
+import { buildCompanyExamSuggestions, buildExamSuggestions, findLatestAttempt, type ExamSuggestion } from "@/lib/exam-suggestions"
 import { formatTimer, getExamTimerState } from "@/lib/exam-timer"
 import { loadAppData } from "@/lib/storage"
 import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
@@ -69,6 +69,28 @@ function loadSession(): TimerSession | null {
   }
 }
 
+function SuggestionButton({ suggestion, onClick, showProvider = false }: {
+  suggestion: ExamSuggestion
+  onClick: (suggestion: ExamSuggestion) => void
+  showProvider?: boolean
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      className="h-auto justify-start whitespace-normal px-4 py-3 text-left"
+      onClick={() => onClick(suggestion)}
+    >
+      <span className="grid gap-1">
+        <span className="font-medium">{showProvider ? `${suggestion.provider} · ${suggestion.paper}` : suggestion.subject}</span>
+        <span className="text-xs font-normal text-muted-foreground">
+          {showProvider ? `${suggestion.subject} · ${suggestion.examYear}` : `${suggestion.examYear} · ${suggestion.paper}`} · {suggestion.marks} marks
+        </span>
+      </span>
+    </Button>
+  )
+}
+
 export function ExamTimer({ references, studies, preferredSubjects, initialExam, onSave }: ExamTimerProps) {
   const [session, setSession] = useState<TimerSession | null>(loadSession)
   const [subject, setSubject] = useState(initialExam?.subject ?? firstPreferredSubject(references.map((item) => item.studyName), preferredSubjects))
@@ -89,6 +111,10 @@ export function ExamTimer({ references, studies, preferredSubjects, initialExam,
   const suggestions = useMemo(
     () => buildExamSuggestions(history.attempts, references, preferredSubjects, 4, studies),
     [history.attempts, preferredSubjects, references, studies],
+  )
+  const companySuggestions = useMemo(
+    () => buildCompanyExamSuggestions(history.attempts, references, preferredSubjects, history.examDifficulty, 4),
+    [history.attempts, history.examDifficulty, preferredSubjects, references],
   )
   const latestAttempt = useMemo(() => findLatestAttempt(history.attempts), [history.attempts])
   const now = useTickingNow(250)
@@ -209,7 +235,7 @@ export function ExamTimer({ references, studies, preferredSubjects, initialExam,
     return (
       <div className="grid gap-6">
         <PageHeader title="Exam timer" description="Choose an exam, set the conditions, then begin when your paper is ready." />
-        {suggestions.length ? (
+        {suggestions.length || companySuggestions.length ? (
           <Card className="w-full">
             <CardHeader>
               <CardTitle>Suggested next exams</CardTitle>
@@ -220,23 +246,23 @@ export function ExamTimer({ references, studies, preferredSubjects, initialExam,
                 {" "}Choose one to fill the setup form.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {suggestions.map((suggestion) => (
-                <Button
-                  key={`${suggestion.subject}-${suggestion.examYear}-${suggestion.paper}`}
-                  type="button"
-                  variant="outline"
-                  className="h-auto justify-start whitespace-normal px-4 py-3 text-left"
-                  onClick={() => applySuggestion(suggestion)}
-                >
-                  <span className="grid gap-1">
-                    <span className="font-medium">{suggestion.subject}</span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {suggestion.examYear} · {suggestion.paper} · {suggestion.marks} marks
-                    </span>
-                  </span>
-                </Button>
-              ))}
+            <CardContent className="grid gap-6">
+              {suggestions.length ? <section className="grid gap-2" aria-labelledby="official-suggestions-title">
+                <div><h3 id="official-suggestions-title" className="text-sm font-medium">Official VCAA papers</h3><p className="text-xs text-muted-foreground">Continue through available papers and years for your current subject.</p></div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  {suggestions.map((suggestion) => (
+                    <SuggestionButton key={`${suggestion.subject}-${suggestion.provider}-${suggestion.examYear}-${suggestion.paper}`} suggestion={suggestion} onClick={applySuggestion} />
+                  ))}
+                </div>
+              </section> : null}
+              {companySuggestions.length ? <section className="grid gap-2" aria-labelledby="company-suggestions-title">
+                <div><h3 id="company-suggestions-title" className="text-sm font-medium">Company exam progression</h3><p className="text-xs text-muted-foreground">Finish this provider&apos;s paper set, then progress from easier companies towards harder ones.</p></div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  {companySuggestions.map((suggestion) => (
+                    <SuggestionButton key={`${suggestion.subject}-${suggestion.provider}-${suggestion.examYear}-${suggestion.paper}`} suggestion={suggestion} onClick={applySuggestion} showProvider />
+                  ))}
+                </div>
+              </section> : null}
             </CardContent>
           </Card>
         ) : null}

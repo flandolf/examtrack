@@ -1,4 +1,5 @@
 import { getMistakeSchedule, type ExamAttempt, type Mistake } from "@/lib/exam-data"
+import { getAttemptPerformance, type ExamDifficultySettings } from "@/lib/exam-difficulty"
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -28,14 +29,22 @@ export type SubjectOutlook = {
   confidence: "low" | "medium" | "high"
 }
 
-function buildOutlook(subject: string, attempts: ExamAttempt[]): SubjectOutlook {
-  const scores = attempts
+function buildOutlook(subject: string, attempts: ExamAttempt[], settings?: ExamDifficultySettings): SubjectOutlook {
+  const performances = attempts
     .toSorted((first, second) => first.completedAt.localeCompare(second.completedAt))
-    .map((attempt) => attempt.rawScore / attempt.rawMax * 100)
+    .map((attempt) => getAttemptPerformance(attempt, settings))
+  const scores = performances.map((performance) => performance.alignedPercentage)
+  const relevance = performances.map((performance) => performance.relevanceWeight)
   const recent = scores.slice(-3)
   const previous = scores.slice(-6, -3)
-  const currentAverage = average(recent)
-  const momentum = previous.length ? currentAverage - average(previous) : scores.length >= 2 ? scores.at(-1)! - scores.at(-2)! : 0
+  const weighted = (values: number[], weights: number[]) => {
+    const total = weights.reduce((sum, weight) => sum + weight, 0)
+    return total ? values.reduce((sum, value, index) => sum + value * weights[index], 0) / total : average(values)
+  }
+  const recentWeights = relevance.slice(-3)
+  const previousWeights = relevance.slice(-6, -3)
+  const currentAverage = weighted(recent, recentWeights)
+  const momentum = previous.length ? currentAverage - weighted(previous, previousWeights) : scores.length >= 2 ? scores.at(-1)! - scores.at(-2)! : 0
   const spread = standardDeviation(scores.slice(-5))
 
   if (scores.length < 2) {
@@ -54,7 +63,7 @@ function buildOutlook(subject: string, attempts: ExamAttempt[]): SubjectOutlook 
 
   // A recency-weighted least-squares trend reduces the influence of old papers while
   // retaining more evidence than a simple latest-vs-previous comparison.
-  const weights = scores.map((_, index) => 0.78 ** (scores.length - index - 1))
+  const weights = scores.map((_, index) => 0.78 ** (scores.length - index - 1) * relevance[index])
   const weightTotal = weights.reduce((total, value) => total + value, 0)
   const meanX = scores.reduce((total, _, index) => total + index * weights[index], 0) / weightTotal
   const meanY = scores.reduce((total, score, index) => total + score * weights[index], 0) / weightTotal
@@ -83,13 +92,13 @@ function buildOutlook(subject: string, attempts: ExamAttempt[]): SubjectOutlook 
   }
 }
 
-export function buildSubjectOutlooks(attempts: ExamAttempt[]): SubjectOutlook[] {
+export function buildSubjectOutlooks(attempts: ExamAttempt[], settings?: ExamDifficultySettings): SubjectOutlook[] {
   const grouped = new Map<string, ExamAttempt[]>()
   for (const attempt of attempts) {
     grouped.set(attempt.subject, [...(grouped.get(attempt.subject) ?? []), attempt])
   }
   return [...grouped.entries()]
-    .map(([subject, subjectAttempts]) => buildOutlook(subject, subjectAttempts))
+    .map(([subject, subjectAttempts]) => buildOutlook(subject, subjectAttempts, settings))
     .toSorted((first, second) => first.projectedNext - second.projectedNext || second.attempts - first.attempts)
 }
 

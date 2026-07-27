@@ -33,6 +33,7 @@ import { PageHeader } from "@/components/page-header"
 import { UpcomingExamsCard } from "@/components/upcoming-exams-card"
 import { ExamTable } from "@/components/exam-table"
 import { getExamTarget } from "@/lib/exam-target"
+import { getAttemptPerformance, weightedPerformanceAverage, type ExamDifficultySettings } from "@/lib/exam-difficulty"
 
 const PerformanceTrendChart = lazy(() =>
   import("@/components/performance-trend-chart").then((module) => ({ default: module.PerformanceTrendChart })),
@@ -161,7 +162,7 @@ function CoverageSummary({ data }: { data: AppData }) {
   )
 }
 
-function computeStats(attempts: ExamAttempt[]) {
+function computeStats(attempts: ExamAttempt[], settings?: ExamDifficultySettings) {
   if (attempts.length === 0) {
     return { count: 0, subjects: 0, average: 0, best: 0, trendDiff: 0, trend: "flat" as const, lastDate: null }
   }
@@ -169,15 +170,15 @@ function computeStats(attempts: ExamAttempt[]) {
   const sorted = [...attempts].toSorted((first, second) =>
     first.completedAt.localeCompare(second.completedAt),
   )
-  const pcts = sorted.map((attempt) => (attempt.rawScore / attempt.rawMax) * 100)
-  const average = pcts.reduce((total, value) => total + value, 0) / pcts.length
-  const best = Math.max(...pcts)
+  const pcts = sorted.map((attempt) => getAttemptPerformance(attempt, settings).alignedPercentage)
+  const average = weightedPerformanceAverage(sorted, settings)
+  const best = Math.max(...sorted.map((attempt) => (attempt.rawScore / attempt.rawMax) * 100))
   let trend: "up" | "down" | "flat" = "flat"
   let trendDiff = 0
   if (pcts.length >= 2) {
     const split = Math.max(1, Math.floor(pcts.length / 2))
-    const prior = pcts.slice(0, split).reduce((total, value) => total + value, 0) / split
-    const recent = pcts.slice(split).reduce((total, value) => total + value, 0) / (pcts.length - split)
+    const prior = weightedPerformanceAverage(sorted.slice(0, split), settings)
+    const recent = weightedPerformanceAverage(sorted.slice(split), settings)
     trendDiff = recent - prior
     if (trendDiff > 0.5) trend = "up"
     else if (trendDiff < -0.5) trend = "down"
@@ -196,17 +197,17 @@ function computeStats(attempts: ExamAttempt[]) {
 function computeSubjectBreakdown(data: AppData, references: AssessmentReference[]) {
   const buckets = new Map<
     string,
-    { count: number; pctSum: number; lastDate: string; linkedCount: number }
+    { attempts: ExamAttempt[]; count: number; lastDate: string; linkedCount: number }
   >()
   for (const attempt of data.attempts) {
     const bucket = buckets.get(attempt.subject) ?? {
       count: 0,
-      pctSum: 0,
+      attempts: [],
       lastDate: "",
       linkedCount: 0,
     }
     bucket.count += 1
-    bucket.pctSum += (attempt.rawScore / attempt.rawMax) * 100
+    bucket.attempts.push(attempt)
     if (attempt.completedAt > bucket.lastDate) bucket.lastDate = attempt.completedAt
     const direct = references.find(
       (reference) => reference.year === attempt.examYear && matchesAttemptReference(attempt, reference),
@@ -221,7 +222,7 @@ function computeSubjectBreakdown(data: AppData, references: AssessmentReference[
     .map(([subject, bucket]) => ({
       subject,
       count: bucket.count,
-      average: bucket.pctSum / bucket.count,
+      average: weightedPerformanceAverage(bucket.attempts, data.examDifficulty),
       lastDate: bucket.lastDate,
       linkedCount: bucket.linkedCount,
     }))
@@ -252,7 +253,7 @@ function NextActionNotice({ action }: { action: NextAction | null }) {
 }
 
 function StatRow({ data }: { data: AppData }) {
-  const stats = useMemo(() => computeStats(data.attempts), [data.attempts])
+  const stats = useMemo(() => computeStats(data.attempts, data.examDifficulty), [data.attempts, data.examDifficulty])
   const mature = data.mistakes.filter((mistake) => mistake.resolved).length
   const total = data.mistakes.length
   const due = getDueMistakes(data.mistakes).length
@@ -271,7 +272,7 @@ function StatRow({ data }: { data: AppData }) {
         </p>
       </div>
       <div className="flex min-w-0 flex-col gap-1.5 sm:pl-6 lg:px-6">
-        <p className="text-sm text-muted-foreground">Average mark</p>
+        <p className="text-sm text-muted-foreground">VCAA-aligned average</p>
         <div className="flex items-baseline gap-2">
           <p className="text-3xl font-semibold tabular-nums leading-none">
             {stats.count === 0 ? "—" : `${stats.average.toFixed(1)}%`}
@@ -290,7 +291,7 @@ function StatRow({ data }: { data: AppData }) {
         </div>
         <p className="text-xs text-muted-foreground">
           {stats.count < 2
-            ? "Track another attempt to surface a trend"
+            ? "Difficulty-adjusted planning estimate"
             : stats.trend === "flat"
               ? "Stable across your recent attempts"
               : stats.trend === "up"
@@ -323,7 +324,7 @@ function StatRow({ data }: { data: AppData }) {
 }
 
 function ImprovementSignals({ data }: { data: AppData }) {
-  const outlooks = useMemo(() => buildSubjectOutlooks(data.attempts), [data.attempts])
+  const outlooks = useMemo(() => buildSubjectOutlooks(data.attempts, data.examDifficulty), [data.attempts, data.examDifficulty])
   const priorities = useMemo(() => buildFocusPriorities(data.attempts, data.mistakes), [data.attempts, data.mistakes])
   const review = useMemo(() => getMistakeProgress(data.mistakes), [data.mistakes])
   const primary = [...outlooks].toSorted((first, second) => second.attempts - first.attempts)[0]
@@ -381,7 +382,7 @@ function SubjectBreakdown({ data, references }: { data: AppData; references: Ass
       <CardHeader>
         <CardTitle>Subjects</CardTitle>
         <CardDescription>
-          Average mark per subject — the Est. badge marks results linked to an official distribution.
+          VCAA-aligned, relevance-weighted average per subject. Est. marks results linked to an official distribution.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -610,7 +611,7 @@ export function Dashboard(props: DashboardProps) {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 lg:col-span-2">
           <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <PerformanceTrendChart attempts={data.attempts} references={references} preferredSubjects={data.subjects} />
+            <PerformanceTrendChart attempts={data.attempts} references={references} preferredSubjects={data.subjects} difficultySettings={data.examDifficulty} />
           </Suspense>
         </div>
         <div className="min-w-0">
@@ -629,7 +630,7 @@ export function Dashboard(props: DashboardProps) {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
-          <ImprovementOutlookChart attempts={data.attempts} />
+          <ImprovementOutlookChart attempts={data.attempts} difficultySettings={data.examDifficulty} />
         </Suspense>
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <ReviewForecastChart mistakes={data.mistakes} />

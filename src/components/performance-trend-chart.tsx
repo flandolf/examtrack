@@ -12,9 +12,10 @@ import {
   type ExamAttempt,
 } from "@/lib/exam-data"
 import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
+import { getAttemptPerformance, type ExamDifficultySettings } from "@/lib/exam-difficulty"
 
 const chartConfig = {
-  percentage: { label: "Mark %", color: "#16a34a" },
+  percentage: { label: "VCAA-aligned %", color: "#16a34a" },
   average: { label: "Overall average", color: "#ca8a04" },
   vcaaMeanPercentage: { label: "Est. VCAA mean", color: "#2563eb" },
   aPlusCutoffPercentage: { label: "Official A+ cutoff", color: "#dc2626" },
@@ -26,6 +27,9 @@ type TrendPoint = {
   timestamp: number
   dateLabel: string
   percentage: number
+  rawPercentage: number
+  adjustment: number
+  providerRelevance: number
   rawScore: number
   rawMax: number
   subject: string
@@ -42,6 +46,7 @@ function buildTrend(
   attempts: ExamAttempt[],
   references: AssessmentReference[],
   subjectFilter: string,
+  difficultySettings?: ExamDifficultySettings,
 ): TrendPoint[] {
   const filtered = subjectFilter === "all" ? attempts : attempts.filter((attempt) => attempt.subject === subjectFilter)
   return filtered
@@ -49,6 +54,7 @@ function buildTrend(
     .map((attempt, index) => {
       const reference = findAttemptReference(attempt, references)
       const analysis = analyseAttempt(attempt, reference)
+      const performance = getAttemptPerformance(attempt, difficultySettings)
       const aPlus = reference?.gradeBands.find((band) => band.grade.trim().toUpperCase() === "A+")
       const date = new Date(`${attempt.completedAt}T00:00:00`)
       return {
@@ -60,7 +66,10 @@ function buildTrend(
           month: "short",
           year: "numeric",
         }),
-        percentage: analysis.percentage,
+        percentage: performance.alignedPercentage,
+        rawPercentage: performance.rawPercentage,
+        adjustment: performance.adjustment,
+        providerRelevance: performance.relevanceWeight,
         rawScore: attempt.rawScore,
         rawMax: attempt.rawMax,
         subject: attempt.subject,
@@ -100,10 +109,12 @@ export function PerformanceTrendChart({
   attempts,
   references,
   preferredSubjects,
+  difficultySettings,
 }: {
   attempts: ExamAttempt[]
   references: AssessmentReference[]
   preferredSubjects: string[]
+  difficultySettings?: ExamDifficultySettings
 }) {
   const filterId = useId()
   const subjects = useMemo(
@@ -118,8 +129,8 @@ export function PerformanceTrendChart({
   }, [subjects, subjectFilter])
 
   const trend = useMemo(
-    () => buildTrend(attempts, references, subjectFilter),
-    [attempts, references, subjectFilter],
+    () => buildTrend(attempts, references, subjectFilter, difficultySettings),
+    [attempts, references, subjectFilter, difficultySettings],
   )
   const summary = useMemo(() => buildSummary(trend), [trend])
   const overallAverage = useMemo(() => {
@@ -134,7 +145,7 @@ export function PerformanceTrendChart({
         <CardHeader>
           <CardTitle>Performance trend</CardTitle>
           <CardDescription>
-            Track your mark percentage over time, with official comparisons where linked.
+            Track VCAA-aligned performance over time, with official comparisons where linked.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -214,8 +225,9 @@ export function PerformanceTrendChart({
                       {point.subject} · {point.dateLabel}
                     </p>
                     <p className="mt-1.5 font-mono font-medium tabular-nums">
-                      {point.rawScore}/{point.rawMax} · {point.percentage.toFixed(1)}%
+                      {point.rawScore}/{point.rawMax} · {point.rawPercentage.toFixed(1)}% raw
                     </p>
+                    {Math.abs(point.adjustment) > 0.01 ? <p className="mt-1 text-muted-foreground tabular-nums">VCAA-aligned {point.percentage.toFixed(1)}% · {point.adjustment > 0 ? "+" : ""}{point.adjustment.toFixed(1)} pts · {Math.round(point.providerRelevance * 100)}% evidence weight</p> : null}
                     {point.grade ? (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         <Badge variant="secondary">{point.grade}</Badge>

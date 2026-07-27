@@ -58,6 +58,7 @@ import type { ScalingReference } from "@/lib/scaling"
 import { ExamTrackerPicker } from "@/components/exam-tracker-picker"
 import type { ExamTimerPreset } from "@/components/exam-timer"
 import type { VcaaStudyResources } from "@/lib/vcaa-resources"
+import type { ExamDifficultySettings } from "@/lib/exam-difficulty"
 
 const ExamSheet = lazy(() =>
   import("@/components/exam-sheet").then((module) => ({ default: module.ExamSheet })),
@@ -275,6 +276,10 @@ export default function App() {
     setData((current) => ({ ...current, subjects, subjectsUpdatedAt: new Date().toISOString() }))
   }
 
+  function saveExamDifficulty(examDifficulty: ExamDifficultySettings) {
+    setData((current) => ({ ...current, examDifficulty }))
+  }
+
   function toggleCompletedExam(id: string) {
     setData((current) => ({
       ...current,
@@ -435,7 +440,7 @@ export default function App() {
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer key={timerPreset ? `${timerPreset.subject}-${timerPreset.examYear}-${timerPreset.paper}` : "manual"} references={references} studies={resourceStudies} preferredSubjects={data.subjects} initialExam={timerPreset} onSave={(attempt) => { setTimerPreset(null); saveTimedAttempt(attempt) }} /></Suspense> : null}
           {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} scalingReferences={scalingReferences} /></Suspense> : null}
           {view === "vcaa" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><VcaaExplorer references={references} attempts={data.attempts} preferredSubjects={data.subjects} /></Suspense> : null}
-          {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage sync={sync} subjects={[...new Set(references.map((reference) => reference.studyName))]} selectedSubjects={data.subjects} onSubjectsChange={saveSubjects} /></Suspense> : null}
+          {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage sync={sync} subjects={[...new Set(references.map((reference) => reference.studyName))]} selectedSubjects={data.subjects} examDifficulty={data.examDifficulty} onSubjectsChange={saveSubjects} onExamDifficultyChange={saveExamDifficulty} /></Suspense> : null}
         </main>
       </SidebarInset>
       {examOpen ? (

@@ -1,3 +1,5 @@
+import { isExamDifficultySettings, type ExamDifficultySettings } from "@/lib/exam-difficulty"
+
 export const MISTAKE_CATEGORIES = [
   "Concept",
   "Algebra",
@@ -137,6 +139,7 @@ export type AppData = {
   completedExamIds: string[]
   completedExamIdsUpdatedAt: string
   mistakeInsights?: MistakeInsights
+  examDifficulty?: ExamDifficultySettings
 }
 
 export const EMPTY_APP_DATA: AppData = {
@@ -788,7 +791,8 @@ export function isAppData(value: unknown): value is AppData {
     typeof data.trackedExamIdsUpdatedAt === "string" &&
     completedExamIdsValid &&
     typeof data.completedExamIdsUpdatedAt === "string" &&
-    (data.mistakeInsights === undefined || isMistakeInsights(data.mistakeInsights))
+    (data.mistakeInsights === undefined || isMistakeInsights(data.mistakeInsights)) &&
+    (data.examDifficulty === undefined || isExamDifficultySettings(data.examDifficulty))
   )
 }
 

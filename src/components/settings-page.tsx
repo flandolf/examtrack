@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { createChatGPTProxyProvider } from "@opencoredev/loginwithchatgpt-ai"
 import { useLoginWithChatGPT } from "@opencoredev/loginwithchatgpt-react"
-import { ArrowDown, ArrowUp, CheckCircle2, Cloud, Copy, ExternalLink, LogOut, RefreshCw, Sparkles, X } from "lucide-react"
+import { ArrowDown, ArrowUp, CheckCircle2, Cloud, Copy, ExternalLink, LogOut, RefreshCw, RotateCcw, Sparkles, X } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { SubjectCombobox } from "@/components/subject-combobox"
 import { Badge } from "@/components/ui/badge"
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   loadAISettings,
@@ -17,6 +18,7 @@ import {
   type ReasoningEffort,
 } from "@/lib/ai-settings"
 import type { useSupabaseSync } from "@/lib/sync"
+import { DEFAULT_PROVIDER_DIFFICULTY, resolveDifficultySettings, type ExamDifficultySettings } from "@/lib/exam-difficulty"
 
 const REASONING_LABELS: Record<ReasoningEffort, string> = {
   none: "None",
@@ -33,11 +35,13 @@ function getModelAccent(model: string) {
   if (model.endsWith("-luna")) return "var(--chart-3)"
   return "var(--chart-2)"
 }
-export function SettingsPage({ sync, subjects, selectedSubjects, onSubjectsChange }: {
+export function SettingsPage({ sync, subjects, selectedSubjects, examDifficulty, onSubjectsChange, onExamDifficultyChange }: {
   sync: ReturnType<typeof useSupabaseSync>
   subjects: string[]
   selectedSubjects: string[]
+  examDifficulty?: ExamDifficultySettings
   onSubjectsChange: (subjects: string[]) => void
+  onExamDifficultyChange: (settings: ExamDifficultySettings) => void
 }) {
   const auth = useLoginWithChatGPT()
   const [email, setEmail] = useState("")
@@ -49,6 +53,11 @@ export function SettingsPage({ sync, subjects, selectedSubjects, onSubjectsChang
   const [loadingModels, setLoadingModels] = useState(false)
   const [modelError, setModelError] = useState<string | null>(null)
   const [subjectToAdd, setSubjectToAdd] = useState("")
+  const difficulty = resolveDifficultySettings(examDifficulty)
+
+  function updateDifficulty(changes: Partial<ExamDifficultySettings>) {
+    onExamDifficultyChange({ ...difficulty, ...changes, updatedAt: new Date().toISOString() })
+  }
 
   function update(next: AISettings) {
     setSettings(next)
@@ -122,6 +131,61 @@ export function SettingsPage({ sync, subjects, selectedSubjects, onSubjectsChang
               ))}
             </ol>
           ) : <p className="text-sm text-muted-foreground">Add your subjects in priority order.</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Exam difficulty calibration</CardTitle>
+          <CardDescription>Turn mixed-company marks into a cautious VCAA-aligned signal. Hardest is first; VCAA is the zero-adjustment baseline.</CardDescription>
+          <CardAction>
+            <Button type="button" size="sm" variant={difficulty.enabled ? "default" : "outline"} aria-pressed={difficulty.enabled} onClick={() => updateDifficulty({ enabled: !difficulty.enabled })}>
+              {difficulty.enabled ? "Enabled" : "Disabled"}
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <Field className="w-full max-w-xs">
+              <FieldLabel htmlFor="difficulty-strength">Adjustment strength</FieldLabel>
+              <Select value={difficulty.strength} onValueChange={(value) => updateDifficulty({ strength: (value ?? "balanced") as ExamDifficultySettings["strength"] })} disabled={!difficulty.enabled}>
+                <SelectTrigger id="difficulty-strength" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light · 1 point per rank</SelectItem>
+                  <SelectItem value="balanced">Balanced · 1.5 points per rank</SelectItem>
+                  <SelectItem value="strong">Strong · 2 points per rank</SelectItem>
+                </SelectContent>
+              </Select>
+              <FieldDescription>Adjustments are capped at ±8 points. VCAA stays unchanged.</FieldDescription>
+            </Field>
+            <Button type="button" variant="outline" disabled={difficulty.providerOrder.join("|") === DEFAULT_PROVIDER_DIFFICULTY.join("|")} onClick={() => updateDifficulty({ providerOrder: [...DEFAULT_PROVIDER_DIFFICULTY] })}>
+              <RotateCcw />Reset order
+            </Button>
+          </div>
+          <ol className="grid max-w-xl gap-2">
+            {difficulty.providerOrder.map((provider, index) => {
+              const vcaaIndex = difficulty.providerOrder.indexOf("VCAA")
+              const adjustment = Math.max(-8, Math.min(8, (vcaaIndex - index) * ({ light: 1, balanced: 1.5, strong: 2 }[difficulty.strength])))
+              return (
+                <li key={provider} className="flex items-center gap-2 rounded-lg border px-3 py-2">
+                  <span className="w-6 text-sm tabular-nums text-muted-foreground">{index + 1}</span>
+                  <strong className="min-w-0 flex-1 truncate text-sm">{provider}</strong>
+                  <span className="w-16 text-right text-xs tabular-nums text-muted-foreground">{adjustment === 0 ? "baseline" : `${adjustment > 0 ? "+" : ""}${adjustment} pts`}</span>
+                  <Button type="button" variant="ghost" size="icon-sm" aria-label={`Move ${provider} up`} disabled={!difficulty.enabled || index === 0} onClick={() => {
+                    const providerOrder = [...difficulty.providerOrder]
+                    ;[providerOrder[index - 1], providerOrder[index]] = [providerOrder[index], providerOrder[index - 1]]
+                    updateDifficulty({ providerOrder })
+                  }}><ArrowUp /></Button>
+                  <Button type="button" variant="ghost" size="icon-sm" aria-label={`Move ${provider} down`} disabled={!difficulty.enabled || index === difficulty.providerOrder.length - 1} onClick={() => {
+                    const providerOrder = [...difficulty.providerOrder]
+                    ;[providerOrder[index], providerOrder[index + 1]] = [providerOrder[index + 1], providerOrder[index]]
+                    updateDifficulty({ providerOrder })
+                  }}><ArrowDown /></Button>
+                </li>
+              )
+            })}
+          </ol>
+          <p className="max-w-2xl text-xs leading-5 text-muted-foreground">Tutor-company papers also receive less influence the further they sit from VCAA. NHT is treated as official-style but slightly harder by default. This is a planning estimate, not an official VCAA conversion.</p>
         </CardContent>
       </Card>
 

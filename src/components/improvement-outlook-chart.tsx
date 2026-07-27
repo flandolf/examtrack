@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip } from "@/components/ui/chart"
 import type { ExamAttempt } from "@/lib/exam-data"
 import { buildSubjectOutlooks, type SubjectOutlook } from "@/lib/performance-insights"
+import type { ExamDifficultySettings } from "@/lib/exam-difficulty"
 
 const chartConfig = {
   currentAverage: { label: "Recent average", color: "#2563eb" },
@@ -15,8 +16,8 @@ function formatSubject(value: string) {
   return value.length > 24 ? `${value.slice(0, 22)}…` : value
 }
 
-export function ImprovementOutlookChart({ attempts }: { attempts: ExamAttempt[] }) {
-  const outlooks = useMemo(() => buildSubjectOutlooks(attempts), [attempts])
+export function ImprovementOutlookChart({ attempts, difficultySettings }: { attempts: ExamAttempt[]; difficultySettings?: ExamDifficultySettings }) {
+  const outlooks = useMemo(() => buildSubjectOutlooks(attempts, difficultySettings), [attempts, difficultySettings])
   const improving = outlooks.filter((item) => item.projectedNext > item.currentAverage + 1).length
   const summary = outlooks.length
     ? `${improving} of ${outlooks.length} subject${outlooks.length === 1 ? "" : "s"} currently project upward from their recent average.`
@@ -68,7 +69,7 @@ export function ImprovementOutlookChart({ attempts }: { attempts: ExamAttempt[] 
               </BarChart>
             </ChartContainer>
             <p className="mt-3 text-xs text-muted-foreground">
-              Projection uses recency-weighted regression, with older papers contributing less. It is a study signal, not a guaranteed result; the tooltip shows uncertainty and evidence strength.
+              Projection uses recency, provider difficulty and VCAA relevance. Official-style papers contribute more than providers far from the VCAA baseline. It is a study signal, not a guaranteed result.
             </p>
           </>
         ) : null}

@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test"
-import { buildSacSubjectStats, computeSacStats, getSacTimerState, getUpcomingSacs, isSacRecord, sacPercentage, validateSac, type SacRecord } from "../src/lib/sac"
+import { buildSacSubjectStats, computeSacStats, getSacTimerState, getUpcomingSacs, isSacRecord, migrateSacRecords, sacPercentage, validateSac, type SacRecord } from "../src/lib/sac"
 
 const base: SacRecord = {
   id: "sac-1",
   subject: "Mathematical Methods",
+  provider: "Northside College",
   title: "Calculus SAC",
+  sacNumber: "2A",
   unit: 3,
   areaOfStudy: "Calculus",
   scheduledAt: "2026-08-10",
@@ -23,8 +25,14 @@ describe("SAC tracking", () => {
     expect(validateSac({ ...base, score: undefined, maxScore: undefined })).toBeNull()
     expect(validateSac({ ...base, score: 51 })).toBe("Mark cannot exceed the maximum.")
     expect(validateSac({ ...base, maxScore: undefined })).toBe("Enter both the mark and maximum, or leave both blank.")
+    expect(validateSac({ ...base, provider: "" })).toBe("Subject, school/provider, and SAC title are required.")
     expect(isSacRecord(base)).toBe(true)
     expect(isSacRecord({ ...base, timing: { ...base.timing!, actualSeconds: -1 } })).toBe(false)
+  })
+
+  test("backfills a school/provider for records saved before the field existed", () => {
+    const { provider: _provider, ...legacy } = base
+    expect(migrateSacRecords([legacy])).toEqual([{ ...legacy, provider: "School" }])
   })
 
   test("computes weighted results, trends, time, and upcoming work", () => {

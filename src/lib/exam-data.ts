@@ -1,5 +1,5 @@
 import { isExamDifficultySettings, type ExamDifficultySettings } from "@/lib/exam-difficulty"
-import { isSacRecord, type SacRecord } from "@/lib/sac"
+import { isSacRecord, migrateSacRecords, type SacRecord } from "@/lib/sac"
 
 export const MISTAKE_CATEGORIES = [
   "Concept",
@@ -846,6 +846,8 @@ export function migrateAppData(value: unknown): AppData | null {
   const schemaVersion = data.schemaVersion
   if (![1, 2, 3, 4].includes(Number(schemaVersion))) return null
   if (!Array.isArray(data.attempts) || !Array.isArray(data.mistakes)) return null
+  const sacRecords = data.sacRecords === undefined ? [] : migrateSacRecords(data.sacRecords)
+  if (sacRecords === null) return null
   const migrated = {
     ...data,
     schemaVersion: 4 as const,
@@ -855,7 +857,7 @@ export function migrateAppData(value: unknown): AppData | null {
     trackedExamIdsUpdatedAt: typeof data.trackedExamIdsUpdatedAt === "string" ? data.trackedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
     completedExamIds: Array.isArray(data.completedExamIds) ? data.completedExamIds : [],
     completedExamIdsUpdatedAt: typeof data.completedExamIdsUpdatedAt === "string" ? data.completedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
-    sacRecords: Array.isArray(data.sacRecords) ? data.sacRecords : [],
+    sacRecords,
     sacRecordsUpdatedAt: typeof data.sacRecordsUpdatedAt === "string" ? data.sacRecordsUpdatedAt : "1970-01-01T00:00:00.000Z",
   }
   return isAppData(migrated) ? migrated : null

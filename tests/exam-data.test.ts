@@ -184,6 +184,32 @@ describe("exam analysis", () => {
     expect(migrated).toMatchObject({ schemaVersion: 4, sacRecords: [], attempts: [attempt] })
   })
 
+  test("backfills the provider on early v4 SAC records", () => {
+    const migrated = migrateAppData({
+      schemaVersion: 4,
+      attempts: [attempt],
+      mistakes: [],
+      sacRecords: [{
+        id: "sac-legacy",
+        subject: "Mathematical Methods",
+        title: "Functions SAC",
+        unit: 3,
+        scheduledAt: "2026-08-01",
+        durationMinutes: 50,
+        createdAt: "2026-07-28T00:00:00.000Z",
+        updatedAt: "2026-07-28T00:00:00.000Z",
+      }],
+      sacRecordsUpdatedAt: "2026-07-28T00:00:00.000Z",
+      subjects: [],
+      subjectsUpdatedAt: "1970-01-01T00:00:00.000Z",
+      trackedExamIds: [],
+      trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
+      completedExamIds: [],
+      completedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
+    })
+    expect(migrated?.sacRecords[0]).toMatchObject({ provider: "School", title: "Functions SAC" })
+  })
+
   test("rejects v2 AppData missing trackedExamIds and back-fills via migration", () => {
     const v2Incomplete = {
       schemaVersion: 2,

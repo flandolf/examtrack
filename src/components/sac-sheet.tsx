@@ -23,7 +23,9 @@ const today = () => new Date().toISOString().slice(0, 10)
 export function SacSheet({ open, subjects, preferredSubjects, initialRecord, onOpenChange, onSave }: SacSheetProps) {
   const options = useMemo(() => prioritiseSubjects(subjects, preferredSubjects), [preferredSubjects, subjects])
   const [subject, setSubject] = useState(initialRecord?.subject ?? preferredSubjects[0] ?? options[0] ?? "")
+  const [provider, setProvider] = useState(initialRecord?.provider ?? "")
   const [title, setTitle] = useState(initialRecord?.title ?? "")
+  const [sacNumber, setSacNumber] = useState(initialRecord?.sacNumber ?? "")
   const [unit, setUnit] = useState<SacUnit>(initialRecord?.unit ?? 3)
   const [areaOfStudy, setAreaOfStudy] = useState(initialRecord?.areaOfStudy ?? "")
   const [scheduledAt, setScheduledAt] = useState(initialRecord?.scheduledAt ?? today())
@@ -41,6 +43,7 @@ export function SacSheet({ open, subjects, preferredSubjects, initialRecord, onO
     const parsedWeighting = weighting.trim() === "" ? undefined : Number(weighting)
     const candidate = {
       subject: subject.trim(),
+      provider: provider.trim(),
       title: title.trim(),
       unit,
       scheduledAt,
@@ -58,6 +61,7 @@ export function SacSheet({ open, subjects, preferredSubjects, initialRecord, onO
     onSave({
       id: initialRecord?.id ?? crypto.randomUUID(),
       ...candidate,
+      sacNumber: sacNumber.trim() || undefined,
       areaOfStudy: areaOfStudy.trim() || undefined,
       completedAt: parsedScore !== undefined ? (initialRecord?.completedAt ?? scheduledAt) : undefined,
       notes: notes.trim() || undefined,
@@ -77,14 +81,26 @@ export function SacSheet({ open, subjects, preferredSubjects, initialRecord, onO
         </SheetHeader>
         <form id="sac-form" className="px-4 pb-4" onSubmit={submit}>
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="sac-subject">Subject</FieldLabel>
-              <SubjectCombobox id="sac-subject" subjects={options} preferredSubjects={preferredSubjects} value={subject} onValueChange={setSubject} allowCustom required placeholder="Search or enter a subject" />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="sac-title">SAC title</FieldLabel>
-              <Input id="sac-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Differentiation and integration" required />
-            </Field>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="sac-subject">Subject</FieldLabel>
+                <SubjectCombobox id="sac-subject" subjects={options} preferredSubjects={preferredSubjects} value={subject} onValueChange={setSubject} allowCustom required placeholder="Search or enter a subject" />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="sac-provider">School / provider</FieldLabel>
+                <Input id="sac-provider" value={provider} onChange={(event) => setProvider(event.target.value)} placeholder="School or practice provider" required />
+              </Field>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-[1fr_10rem]">
+              <Field>
+                <FieldLabel htmlFor="sac-title">SAC title</FieldLabel>
+                <Input id="sac-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Differentiation and integration" required />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="sac-number">SAC number <span className="text-muted-foreground">(optional)</span></FieldLabel>
+                <Input id="sac-number" value={sacNumber} onChange={(event) => setSacNumber(event.target.value)} placeholder="e.g. 2 or 3A" />
+              </Field>
+            </div>
             <div className="grid gap-5 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="sac-unit">Unit</FieldLabel>

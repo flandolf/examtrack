@@ -3,7 +3,7 @@ import type { User } from "@supabase/supabase-js"
 import { EMPTY_APP_DATA, migrateAppData, type AppData, type ExamAttempt, type Mistake, type MistakeInsights } from "@/lib/exam-data"
 import { supabase } from "@/lib/supabase"
 import { isExamDifficultySettings } from "@/lib/exam-difficulty"
-import { isSacRecord, type SacRecord } from "@/lib/sac"
+import { migrateSacRecords, type SacRecord } from "@/lib/sac"
 
 const TOMBSTONE_KEY = "examtrack:sync:tombstones:v1"
 const OWNER_KEY = "examtrack:sync:owner:v1"
@@ -177,7 +177,7 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
   const useRemoteSubjects = remoteSubjectsUpdatedAt > data.subjectsUpdatedAt
   const subjects = useRemoteSubjects ? remoteSubjects : data.subjects
   const subjectsUpdatedAt = useRemoteSubjects ? remoteSubjectsUpdatedAt : data.subjectsUpdatedAt
-  const remoteSacRecords = Array.isArray(remoteState?.sacRecords) && remoteState.sacRecords.every(isSacRecord) ? remoteState.sacRecords : []
+  const remoteSacRecords = migrateSacRecords(remoteState?.sacRecords) ?? []
   const remoteSacUpdatedAt = typeof remoteState?.sacRecordsUpdatedAt === "string" ? remoteState.sacRecordsUpdatedAt : ""
   const { sacRecords, sacRecordsUpdatedAt } = mergeSacState(data.sacRecords, data.sacRecordsUpdatedAt, remoteSacRecords, remoteSacUpdatedAt)
   const remoteInsights = migrateAppData({ ...EMPTY_APP_DATA, mistakeInsights: remoteState?.mistakeInsights })?.mistakeInsights

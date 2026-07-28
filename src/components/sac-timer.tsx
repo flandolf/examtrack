@@ -18,7 +18,9 @@ import { prioritiseSubjects } from "@/lib/subjects"
 type SacTimerSession = {
   recordId?: string
   subject: string
+  provider: string
   title: string
+  sacNumber?: string
   unit: SacUnit
   areaOfStudy?: string
   scheduledAt: string
@@ -46,7 +48,9 @@ const today = () => new Date().toISOString().slice(0, 10)
 function loadSession(): SacTimerSession | null {
   try {
     const value = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? "null") as Partial<SacTimerSession> | null
+    if (value && typeof value.provider !== "string") value.provider = "School"
     return value && typeof value.subject === "string" && typeof value.title === "string" &&
+      typeof value.provider === "string" && (value.sacNumber === undefined || typeof value.sacNumber === "string") &&
       (value.unit === 3 || value.unit === 4) && typeof value.scheduledAt === "string" &&
       typeof value.durationMinutes === "number" && typeof value.maxScore === "number" &&
       typeof value.startedAt === "number" && typeof value.pausedSeconds === "number" &&
@@ -62,7 +66,9 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
   const [session, setSession] = useState<SacTimerSession | null>(loadSession)
   const availableSubjects = useMemo(() => prioritiseSubjects(subjects, preferredSubjects), [preferredSubjects, subjects])
   const [subject, setSubject] = useState(initialRecord?.subject ?? preferredSubjects[0] ?? availableSubjects[0] ?? "")
+  const [provider, setProvider] = useState(initialRecord?.provider ?? "")
   const [title, setTitle] = useState(initialRecord?.title ?? "")
+  const [sacNumber, setSacNumber] = useState(initialRecord?.sacNumber ?? "")
   const [unit, setUnit] = useState<SacUnit>(initialRecord?.unit ?? 3)
   const [areaOfStudy, setAreaOfStudy] = useState(initialRecord?.areaOfStudy ?? "")
   const [scheduledAt, setScheduledAt] = useState(initialRecord?.scheduledAt ?? today())
@@ -79,13 +85,15 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
 
   function start(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const validationError = validateSac({ subject, title, unit, scheduledAt, durationMinutes, maxScore: undefined, score: undefined, weighting: initialRecord?.weighting }) ??
+    const validationError = validateSac({ subject, provider, title, unit, scheduledAt, durationMinutes, maxScore: undefined, score: undefined, weighting: initialRecord?.weighting }) ??
       (!Number.isFinite(maxScore) || maxScore <= 0 ? "Total marks must be greater than zero." : null)
     if (validationError) return setError(validationError)
     const next: SacTimerSession = {
       recordId: initialRecord?.id,
       subject: subject.trim(),
+      provider: provider.trim(),
       title: title.trim(),
+      sacNumber: sacNumber.trim() || undefined,
       unit,
       areaOfStudy: areaOfStudy.trim() || undefined,
       scheduledAt,
@@ -145,6 +153,7 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
     if (!session || !timer) return
     const validationError = validateSac({
       subject: session.subject,
+      provider: session.provider,
       title: session.title,
       unit: session.unit,
       scheduledAt: session.scheduledAt,
@@ -159,7 +168,9 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
     onSave({
       id: session.recordId ?? crypto.randomUUID(),
       subject: session.subject,
+      provider: session.provider,
       title: session.title,
+      sacNumber: session.sacNumber,
       unit: session.unit,
       areaOfStudy: session.areaOfStudy,
       scheduledAt: session.scheduledAt,
@@ -192,7 +203,11 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
             <FieldGroup>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field><FieldLabel htmlFor="sac-timer-subject">Subject</FieldLabel><SubjectCombobox id="sac-timer-subject" subjects={availableSubjects} preferredSubjects={preferredSubjects} value={subject} onValueChange={setSubject} allowCustom required placeholder="Search or enter a subject" /></Field>
+                <Field><FieldLabel htmlFor="sac-timer-provider">School / provider</FieldLabel><Input id="sac-timer-provider" value={provider} onChange={(event) => setProvider(event.target.value)} required placeholder="School or practice provider" /></Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
                 <Field><FieldLabel htmlFor="sac-timer-title">SAC title</FieldLabel><Input id="sac-timer-title" value={title} onChange={(event) => setTitle(event.target.value)} required placeholder="Assessment topic" /></Field>
+                <Field><FieldLabel htmlFor="sac-timer-number">SAC number <span className="text-muted-foreground">(optional)</span></FieldLabel><Input id="sac-timer-number" value={sacNumber} onChange={(event) => setSacNumber(event.target.value)} placeholder="e.g. 2 or 3A" /></Field>
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <Field><FieldLabel htmlFor="sac-timer-unit">Unit</FieldLabel><Select value={String(unit)} onValueChange={(value) => setUnit(Number(value) as SacUnit)}><SelectTrigger id="sac-timer-unit" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="3">Unit 3</SelectItem><SelectItem value="4">Unit 4</SelectItem></SelectContent></Select></Field>
@@ -217,7 +232,7 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><h2 className="text-xl font-semibold">{session.title}</h2><p className="text-sm text-muted-foreground">{session.subject} · Unit {session.unit} · {session.durationMinutes} min · {session.maxScore} marks</p></div>
+        <div><h2 className="text-xl font-semibold">{session.title}</h2><p className="text-sm text-muted-foreground">{session.subject} · {session.provider}{session.sacNumber ? ` · SAC ${session.sacNumber}` : ""} · Unit {session.unit} · {session.durationMinutes} min · {session.maxScore} marks</p></div>
         <div className="flex flex-wrap gap-2"><Button variant="ghost" onClick={discard}><RotateCcw />Discard</Button><Button variant="outline" onClick={session.pausedAt ? resume : pause}>{session.pausedAt ? <Play /> : <Pause />}{session.pausedAt ? "Resume" : "Pause"}</Button><Button onClick={openMarking}><Check />Finish & mark</Button></div>
       </div>
       <section className="grid gap-6 py-8 text-center">

@@ -10,7 +10,9 @@ export type SacTiming = {
 export type SacRecord = {
   id: string
   subject: string
+  provider: string
   title: string
+  sacNumber?: string
   unit: SacUnit
   areaOfStudy?: string
   scheduledAt: string
@@ -59,8 +61,8 @@ function validNonNegativeNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
 }
 
-export function validateSac(record: Pick<SacRecord, "subject" | "title" | "unit" | "scheduledAt" | "durationMinutes" | "score" | "maxScore" | "weighting">): string | null {
-  if (!record.subject.trim() || !record.title.trim()) return "Subject and SAC title are required."
+export function validateSac(record: Pick<SacRecord, "subject" | "provider" | "title" | "unit" | "scheduledAt" | "durationMinutes" | "score" | "maxScore" | "weighting">): string | null {
+  if (!record.subject.trim() || !record.provider.trim() || !record.title.trim()) return "Subject, school/provider, and SAC title are required."
   if (record.unit !== 3 && record.unit !== 4) return "Unit must be 3 or 4."
   if (!record.scheduledAt) return "SAC date is required."
   if (!Number.isFinite(record.durationMinutes) || record.durationMinutes <= 0) return "Duration must be greater than zero."
@@ -90,7 +92,9 @@ export function isSacRecord(value: unknown): value is SacRecord {
   )
   return typeof record.id === "string" &&
     typeof record.subject === "string" &&
+    typeof record.provider === "string" &&
     typeof record.title === "string" &&
+    (record.sacNumber === undefined || typeof record.sacNumber === "string") &&
     (record.unit === 3 || record.unit === 4) &&
     (record.areaOfStudy === undefined || typeof record.areaOfStudy === "string") &&
     typeof record.scheduledAt === "string" &&
@@ -104,6 +108,19 @@ export function isSacRecord(value: unknown): value is SacRecord {
     typeof record.createdAt === "string" &&
     typeof record.updatedAt === "string" &&
     validateSac(record) === null
+}
+
+export function migrateSacRecords(value: unknown): SacRecord[] | null {
+  if (!Array.isArray(value)) return null
+  const migrated = value.map((item) => {
+    if (!isRecord(item)) return null
+    const candidate = {
+      ...item,
+      provider: typeof item.provider === "string" ? item.provider : "School",
+    }
+    return isSacRecord(candidate) ? candidate : null
+  })
+  return migrated.every((item): item is SacRecord => item !== null) ? migrated : null
 }
 
 export function isCompletedSac(record: SacRecord): boolean {

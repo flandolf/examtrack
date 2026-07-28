@@ -1,4 +1,5 @@
 import { isExamDifficultySettings, type ExamDifficultySettings } from "@/lib/exam-difficulty"
+import { isSacRecord, type SacRecord } from "@/lib/sac"
 
 export const MISTAKE_CATEGORIES = [
   "Concept",
@@ -129,9 +130,11 @@ export type MistakeInsights = {
 }
 
 export type AppData = {
-  schemaVersion: 3
+  schemaVersion: 4
   attempts: ExamAttempt[]
   mistakes: Mistake[]
+  sacRecords: SacRecord[]
+  sacRecordsUpdatedAt: string
   subjects: string[]
   subjectsUpdatedAt: string
   trackedExamIds: string[]
@@ -143,9 +146,11 @@ export type AppData = {
 }
 
 export const EMPTY_APP_DATA: AppData = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   attempts: [],
   mistakes: [],
+  sacRecords: [],
+  sacRecordsUpdatedAt: "1970-01-01T00:00:00.000Z",
   subjects: [],
   subjectsUpdatedAt: "1970-01-01T00:00:00.000Z",
   trackedExamIds: [],
@@ -780,11 +785,14 @@ export function isAppData(value: unknown): value is AppData {
   const completedExamIdsValid =
     Array.isArray(data.completedExamIds) &&
     data.completedExamIds.every((value) => typeof value === "string")
+  const sacRecordsValid = Array.isArray(data.sacRecords) && data.sacRecords.every(isSacRecord)
   const subjectsValid = Array.isArray(data.subjects) && data.subjects.every((value) => typeof value === "string")
   return (
-    data.schemaVersion === 3 &&
+    data.schemaVersion === 4 &&
     attemptsValid &&
     mistakesValid &&
+    sacRecordsValid &&
+    typeof data.sacRecordsUpdatedAt === "string" &&
     subjectsValid &&
     typeof data.subjectsUpdatedAt === "string" &&
     trackedExamIdsValid &&
@@ -836,35 +844,19 @@ export function migrateAppData(value: unknown): AppData | null {
   if (!isRecord(value)) return null
   const data = value as Record<string, unknown>
   const schemaVersion = data.schemaVersion
-  if (schemaVersion === 1 || schemaVersion === 2) {
-    if (!Array.isArray(data.attempts) || !Array.isArray(data.mistakes)) return null
-    const migrated = {
-      schemaVersion: 3 as const,
-      attempts: Array.isArray(data.attempts) ? data.attempts : [],
-      mistakes: Array.isArray(data.mistakes) ? data.mistakes : [],
-      subjects: Array.isArray(data.subjects) ? data.subjects : [],
-      subjectsUpdatedAt: typeof data.subjectsUpdatedAt === "string" ? data.subjectsUpdatedAt : "1970-01-01T00:00:00.000Z",
-      trackedExamIds: Array.isArray(data.trackedExamIds) ? data.trackedExamIds : [],
-      trackedExamIdsUpdatedAt: typeof data.trackedExamIdsUpdatedAt === "string" ? data.trackedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
-      completedExamIds: Array.isArray(data.completedExamIds) ? data.completedExamIds : [],
-      completedExamIdsUpdatedAt: typeof data.completedExamIdsUpdatedAt === "string" ? data.completedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
-    }
-    return isAppData(migrated) ? migrated : null
+  if (![1, 2, 3, 4].includes(Number(schemaVersion))) return null
+  if (!Array.isArray(data.attempts) || !Array.isArray(data.mistakes)) return null
+  const migrated = {
+    ...data,
+    schemaVersion: 4 as const,
+    subjects: Array.isArray(data.subjects) ? data.subjects : [],
+    subjectsUpdatedAt: typeof data.subjectsUpdatedAt === "string" ? data.subjectsUpdatedAt : "1970-01-01T00:00:00.000Z",
+    trackedExamIds: Array.isArray(data.trackedExamIds) ? data.trackedExamIds : [],
+    trackedExamIdsUpdatedAt: typeof data.trackedExamIdsUpdatedAt === "string" ? data.trackedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
+    completedExamIds: Array.isArray(data.completedExamIds) ? data.completedExamIds : [],
+    completedExamIdsUpdatedAt: typeof data.completedExamIdsUpdatedAt === "string" ? data.completedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
+    sacRecords: Array.isArray(data.sacRecords) ? data.sacRecords : [],
+    sacRecordsUpdatedAt: typeof data.sacRecordsUpdatedAt === "string" ? data.sacRecordsUpdatedAt : "1970-01-01T00:00:00.000Z",
   }
-  if (schemaVersion === 3) {
-    if (!Array.isArray(data.trackedExamIds) || typeof data.trackedExamIdsUpdatedAt !== "string" || !Array.isArray(data.completedExamIds) || typeof data.completedExamIdsUpdatedAt !== "string" || !Array.isArray(data.subjects) || typeof data.subjectsUpdatedAt !== "string") {
-      const migrated = {
-        ...(data as Partial<AppData>),
-        subjects: Array.isArray(data.subjects) ? data.subjects : [],
-        subjectsUpdatedAt: typeof data.subjectsUpdatedAt === "string" ? data.subjectsUpdatedAt : "1970-01-01T00:00:00.000Z",
-        trackedExamIds: Array.isArray(data.trackedExamIds) ? data.trackedExamIds : [],
-        trackedExamIdsUpdatedAt: typeof data.trackedExamIdsUpdatedAt === "string" ? data.trackedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
-        completedExamIds: Array.isArray(data.completedExamIds) ? data.completedExamIds : [],
-        completedExamIdsUpdatedAt: typeof data.completedExamIdsUpdatedAt === "string" ? data.completedExamIdsUpdatedAt : "1970-01-01T00:00:00.000Z",
-      }
-      return isAppData(migrated) ? migrated : null
-    }
-    return isAppData(data) ? data : null
-  }
-  return null
+  return isAppData(migrated) ? migrated : null
 }

@@ -192,7 +192,7 @@ export function SettingsPage({ sync, subjects, selectedSubjects, examDifficulty,
       <Card>
         <CardHeader>
           <CardTitle>ExamTrack account</CardTitle>
-          <CardDescription>Sign in with your email and password to sync attempts and mistakes across devices.</CardDescription>
+          <CardDescription>Sign in with your email and password to sync exams, SACs, and mistakes across devices.</CardDescription>
           {sync.user ? <CardAction><Badge variant="secondary"><Cloud />{sync.status === "syncing" ? "Syncing" : sync.status === "error" ? "Sync failed" : "Synced"}</Badge></CardAction> : null}
         </CardHeader>
         <CardContent>

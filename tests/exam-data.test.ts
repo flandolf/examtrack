@@ -140,9 +140,11 @@ describe("exam analysis", () => {
   test("rejects malformed imports", () => {
     expect(() => parseAppDataFile('{"schemaVersion":2}')).toThrow("valid ExamTrack")
     const data = {
-      schemaVersion: 3 as const,
+      schemaVersion: 4 as const,
       attempts: [attempt],
       mistakes: [],
+      sacRecords: [],
+      sacRecordsUpdatedAt: "1970-01-01T00:00:00.000Z",
       subjects: [],
       subjectsUpdatedAt: "1970-01-01T00:00:00.000Z",
       trackedExamIds: [],
@@ -154,16 +156,32 @@ describe("exam analysis", () => {
     expect(parseAppDataFile(JSON.stringify(data))).toEqual(data)
   })
 
-  test("migrates v1 AppData to v3 with empty trackedExamIds", () => {
+  test("migrates v1 AppData to v4 with empty tracking collections", () => {
     const v1 = {
       schemaVersion: 1 as const,
       attempts: [attempt],
       mistakes: [],
     }
     const migrated = migrateAppData(v1)
-    expect(migrated?.schemaVersion).toBe(3)
+    expect(migrated?.schemaVersion).toBe(4)
     expect(migrated?.trackedExamIds).toEqual([])
+    expect(migrated?.sacRecords).toEqual([])
     expect(migrated?.attempts).toHaveLength(1)
+  })
+
+  test("migrates v3 exports to v4 without losing exam data", () => {
+    const migrated = migrateAppData({
+      schemaVersion: 3,
+      attempts: [attempt],
+      mistakes: [],
+      subjects: [],
+      subjectsUpdatedAt: "1970-01-01T00:00:00.000Z",
+      trackedExamIds: [],
+      trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
+      completedExamIds: [],
+      completedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z",
+    })
+    expect(migrated).toMatchObject({ schemaVersion: 4, sacRecords: [], attempts: [attempt] })
   })
 
   test("rejects v2 AppData missing trackedExamIds and back-fills via migration", () => {
@@ -199,7 +217,7 @@ describe("exam analysis", () => {
       createdAt: attempt.createdAt,
       updatedAt: attempt.updatedAt,
     }
-    const data = { schemaVersion: 3 as const, attempts: [attempt], mistakes: [mistake], subjects: [], subjectsUpdatedAt: "1970-01-01T00:00:00.000Z", trackedExamIds: [], trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z", completedExamIds: [], completedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z" }
+    const data = { schemaVersion: 4 as const, attempts: [attempt], mistakes: [mistake], sacRecords: [], sacRecordsUpdatedAt: "1970-01-01T00:00:00.000Z", subjects: [], subjectsUpdatedAt: "1970-01-01T00:00:00.000Z", trackedExamIds: [], trackedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z", completedExamIds: [], completedExamIdsUpdatedAt: "1970-01-01T00:00:00.000Z" }
 
     expect(isAppData(data)).toBe(true)
     expect(isAppData({ ...data, mistakes: [{ ...mistake, questionText: "Differentiate $e^{2x}$." }] })).toBe(true)

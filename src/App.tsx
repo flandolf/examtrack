@@ -3,6 +3,7 @@ import {
   ChartNoAxesCombined,
   Clock3,
   Calculator,
+  ClipboardCheck,
   Download,
   GraduationCap,
   LibraryBig,
@@ -59,6 +60,7 @@ import { ExamTrackerPicker } from "@/components/exam-tracker-picker"
 import type { ExamTimerPreset } from "@/components/exam-timer"
 import type { VcaaStudyResources } from "@/lib/vcaa-resources"
 import type { ExamDifficultySettings } from "@/lib/exam-difficulty"
+import type { SacRecord } from "@/lib/sac"
 
 const ExamSheet = lazy(() =>
   import("@/components/exam-sheet").then((module) => ({ default: module.ExamSheet })),
@@ -87,11 +89,15 @@ const ExamLibrary = lazy(() =>
 const MistakesPage = lazy(() =>
   import("@/components/mistakes-page").then((module) => ({ default: module.MistakesPage })),
 )
+const SacPage = lazy(() =>
+  import("@/components/sac-page").then((module) => ({ default: module.SacPage })),
+)
 
-type View = "dashboard" | "library" | "timer" | "mistakes" | "predictor" | "vcaa" | "settings"
+type View = "dashboard" | "sacs" | "library" | "timer" | "mistakes" | "predictor" | "vcaa" | "settings"
 
 const NAVIGATION = [
   { id: "dashboard" as const, label: "Dashboard", icon: ChartNoAxesCombined },
+  { id: "sacs" as const, label: "SACs", icon: ClipboardCheck },
   { id: "library" as const, label: "Exam library", icon: BookOpenText },
   { id: "timer" as const, label: "Exam timer", icon: Clock3 },
   { id: "mistakes" as const, label: "Mistakes", icon: NotebookPen },
@@ -305,6 +311,29 @@ export default function App() {
     toast.success("Timed exam logged")
   }
 
+  function saveSac(record: SacRecord) {
+    const exists = data.sacRecords.some((item) => item.id === record.id)
+    const updatedAt = new Date().toISOString()
+    setData((current) => ({
+      ...current,
+      sacRecords: current.sacRecords.some((item) => item.id === record.id)
+        ? current.sacRecords.map((item) => item.id === record.id ? record : item)
+        : [...current.sacRecords, record],
+      sacRecordsUpdatedAt: updatedAt,
+    }))
+    toast.success(exists ? "SAC updated" : "SAC saved")
+  }
+
+  function deleteSac(record: SacRecord) {
+    setData((current) => ({ ...current, sacRecords: current.sacRecords.filter((item) => item.id !== record.id), sacRecordsUpdatedAt: new Date().toISOString() }))
+    toast("SAC deleted", {
+      action: {
+        label: "Undo",
+        onClick: () => setData((current) => ({ ...current, sacRecords: [...current.sacRecords, { ...record, updatedAt: new Date().toISOString() }], sacRecordsUpdatedAt: new Date().toISOString() })),
+      },
+    })
+  }
+
   function logMistakeForLatest() {
     const latest = [...data.attempts].toSorted((first, second) =>
       second.completedAt.localeCompare(first.completedAt),
@@ -384,7 +413,7 @@ export default function App() {
   async function importData(file: File) {
     try {
       const imported = parseAppDataFile(await file.text())
-      if (!window.confirm(`Replace current data with ${imported.attempts.length} exams and ${imported.mistakes.length} mistakes?`)) return
+      if (!window.confirm(`Replace current data with ${imported.attempts.length} exams, ${imported.sacRecords.length} SACs, and ${imported.mistakes.length} mistakes?`)) return
       setData(imported)
       toast.success("ExamTrack data imported")
     } catch (error) {
@@ -436,6 +465,7 @@ export default function App() {
             </Suspense>
           ) : null}
           {view === "mistakes" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><MistakesPage data={data} studies={resourceStudies} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onReview={reviewMistake} onToggleSuspend={toggleMistakeSuspension} onDelete={deleteMistake} onSaveInsights={(mistakeInsights) => setData((current) => ({ ...current, mistakeInsights }))} /></Suspense> : null}
+          {view === "sacs" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SacPage records={data.sacRecords} subjects={references.map((reference) => reference.studyName)} preferredSubjects={data.subjects} onSave={saveSac} onDelete={deleteSac} /></Suspense> : null}
           {view === "library" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamLibrary references={references} studies={resourceStudies} attempts={data.attempts} completedExamIds={data.completedExamIds} generatedAt={resourcesGeneratedAt ?? referencesGeneratedAt} preferredSubjects={data.subjects} onToggleCompleted={toggleCompletedExam} onStart={(preset) => { setTimerPreset(preset); setView("timer") }} /></Suspense> : null}
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer key={timerPreset ? `${timerPreset.subject}-${timerPreset.examYear}-${timerPreset.paper}` : "manual"} references={references} studies={resourceStudies} preferredSubjects={data.subjects} initialExam={timerPreset} onSave={(attempt) => { setTimerPreset(null); saveTimedAttempt(attempt) }} /></Suspense> : null}
           {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} scalingReferences={scalingReferences} /></Suspense> : null}

@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js"
 import { EMPTY_APP_DATA, migrateAppData, type AppData, type ExamAttempt, type Mistake, type MistakeInsights } from "@/lib/exam-data"
 import { supabase } from "@/lib/supabase"
 import { isExamDifficultySettings } from "@/lib/exam-difficulty"
+import { isSacRecord, type SacRecord } from "@/lib/sac"
 
 const TOMBSTONE_KEY = "examtrack:sync:tombstones:v1"
 const OWNER_KEY = "examtrack:sync:owner:v1"
@@ -77,6 +78,17 @@ export function mergeTrackedState(
     : { trackedExamIds: localIds, trackedExamIdsUpdatedAt: localUpdatedAt }
 }
 
+export function mergeSacState(
+  localRecords: SacRecord[],
+  localUpdatedAt: string,
+  remoteRecords: SacRecord[],
+  remoteUpdatedAt: string,
+) {
+  return remoteUpdatedAt > localUpdatedAt
+    ? { sacRecords: remoteRecords, sacRecordsUpdatedAt: remoteUpdatedAt }
+    : { sacRecords: localRecords, sacRecordsUpdatedAt: localUpdatedAt }
+}
+
 export function mergeMistakeInsights(local?: MistakeInsights, remote?: MistakeInsights) {
   const updatedAt = (insights?: MistakeInsights) => insights?.questionsGeneratedAt ?? insights?.generatedAt ?? ""
   return remote && updatedAt(remote) > updatedAt(local) ? remote : local
@@ -128,9 +140,11 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
   const activeAttempts = attemptResult.data.filter((row) => !row.deleted_at).map((row) => row.payload)
   const activeMistakes = mistakeResult.data.filter((row) => !row.deleted_at).map((row) => row.payload)
   const validated = migrateAppData({
-    schemaVersion: 3,
+    schemaVersion: 4,
     attempts: activeAttempts,
     mistakes: activeMistakes,
+    sacRecords: [],
+    sacRecordsUpdatedAt: "1970-01-01T00:00:00.000Z",
     subjects: [],
     subjectsUpdatedAt: "1970-01-01T00:00:00.000Z",
     trackedExamIds: [],
@@ -149,7 +163,7 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
     syncCollection<ExamAttempt>("attempts", userId, data.attempts, attemptRows, tombstones.attempts),
     syncCollection<Mistake>("mistakes", userId, data.mistakes, mistakeRows, tombstones.mistakes),
   ])
-  const remoteState = stateResult.data?.payload as { trackedExamIds?: unknown; trackedExamIdsUpdatedAt?: unknown; completedExamIds?: unknown; completedExamIdsUpdatedAt?: unknown; subjects?: unknown; subjectsUpdatedAt?: unknown; mistakeInsights?: unknown; examDifficulty?: unknown } | undefined
+  const remoteState = stateResult.data?.payload as { trackedExamIds?: unknown; trackedExamIdsUpdatedAt?: unknown; completedExamIds?: unknown; completedExamIdsUpdatedAt?: unknown; subjects?: unknown; subjectsUpdatedAt?: unknown; sacRecords?: unknown; sacRecordsUpdatedAt?: unknown; mistakeInsights?: unknown; examDifficulty?: unknown } | undefined
   const remoteIds = Array.isArray(remoteState?.trackedExamIds) && remoteState.trackedExamIds.every((id) => typeof id === "string") ? remoteState.trackedExamIds : []
   const remoteUpdatedAt = typeof remoteState?.trackedExamIdsUpdatedAt === "string" ? remoteState.trackedExamIdsUpdatedAt : (stateResult.data?.updated_at ?? "")
   const { trackedExamIds, trackedExamIdsUpdatedAt } = mergeTrackedState(data.trackedExamIds, data.trackedExamIdsUpdatedAt, remoteIds, remoteUpdatedAt)
@@ -163,6 +177,9 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
   const useRemoteSubjects = remoteSubjectsUpdatedAt > data.subjectsUpdatedAt
   const subjects = useRemoteSubjects ? remoteSubjects : data.subjects
   const subjectsUpdatedAt = useRemoteSubjects ? remoteSubjectsUpdatedAt : data.subjectsUpdatedAt
+  const remoteSacRecords = Array.isArray(remoteState?.sacRecords) && remoteState.sacRecords.every(isSacRecord) ? remoteState.sacRecords : []
+  const remoteSacUpdatedAt = typeof remoteState?.sacRecordsUpdatedAt === "string" ? remoteState.sacRecordsUpdatedAt : ""
+  const { sacRecords, sacRecordsUpdatedAt } = mergeSacState(data.sacRecords, data.sacRecordsUpdatedAt, remoteSacRecords, remoteSacUpdatedAt)
   const remoteInsights = migrateAppData({ ...EMPTY_APP_DATA, mistakeInsights: remoteState?.mistakeInsights })?.mistakeInsights
   const mistakeInsights = mergeMistakeInsights(data.mistakeInsights, remoteInsights)
   const remoteDifficulty = isExamDifficultySettings(remoteState?.examDifficulty) ? remoteState.examDifficulty : undefined
@@ -171,12 +188,12 @@ export async function syncAppData(data: AppData, userId: string): Promise<AppDat
     : data.examDifficulty
   const { error: stateError } = await supabase.from("user_state").upsert({
     user_id: userId,
-    payload: { trackedExamIds, trackedExamIdsUpdatedAt, completedExamIds, completedExamIdsUpdatedAt, subjects, subjectsUpdatedAt, mistakeInsights, examDifficulty },
-    updated_at: [trackedExamIdsUpdatedAt, completedExamIdsUpdatedAt, subjectsUpdatedAt, mistakeInsights?.questionsGeneratedAt ?? mistakeInsights?.generatedAt ?? "", examDifficulty?.updatedAt ?? ""].toSorted().at(-1),
+    payload: { trackedExamIds, trackedExamIdsUpdatedAt, completedExamIds, completedExamIdsUpdatedAt, subjects, subjectsUpdatedAt, sacRecords, sacRecordsUpdatedAt, mistakeInsights, examDifficulty },
+    updated_at: [trackedExamIdsUpdatedAt, completedExamIdsUpdatedAt, subjectsUpdatedAt, sacRecordsUpdatedAt, mistakeInsights?.questionsGeneratedAt ?? mistakeInsights?.generatedAt ?? "", examDifficulty?.updatedAt ?? ""].toSorted().at(-1),
   }, { onConflict: "user_id" })
   if (stateError) throw stateError
   saveTombstones(tombstones)
-  return { ...data, attempts: attempts ?? data.attempts, mistakes: mistakes ?? data.mistakes, subjects, subjectsUpdatedAt, trackedExamIds, trackedExamIdsUpdatedAt, completedExamIds, completedExamIdsUpdatedAt, mistakeInsights, examDifficulty }
+  return { ...data, attempts: attempts ?? data.attempts, mistakes: mistakes ?? data.mistakes, subjects, subjectsUpdatedAt, trackedExamIds, trackedExamIdsUpdatedAt, completedExamIds, completedExamIdsUpdatedAt, sacRecords, sacRecordsUpdatedAt, mistakeInsights, examDifficulty }
 }
 
 export type SyncStatus = "unconfigured" | "signed-out" | "syncing" | "synced" | "error"

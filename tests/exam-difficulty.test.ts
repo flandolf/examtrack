@@ -52,6 +52,7 @@ describe("exam difficulty calibration", () => {
 
   test("recognises Hefferman spelling and NHT paper labels", () => {
     expect(identifyDifficultyProvider(attempt("Hefferman"))).toBe("Heffernan")
+    expect(identifyDifficultyProvider(attempt("Heffernan"))).toBe("Heffernan")
     expect(identifyDifficultyProvider(attempt("VCAA", 60, "VCAA Methods", "Northern Hemisphere Exam"))).toBe("VCAA NHT")
   })
 })

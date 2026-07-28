@@ -48,7 +48,7 @@ export function identifyDifficultyProvider(attempt: Pick<ExamAttempt, "provider"
   if (/\bvcaa\b|victorian curriculum and assessment authority/.test(provider)) return "VCAA"
   if (/\bneap\b/.test(provider)) return "NEAP"
   if (/\binsight\b/.test(provider)) return "Insight"
-  if (/\bhefferm[ae]n\b/.test(provider)) return "Heffernan"
+  if (/\b(?:heffernan|hefferman)\b/.test(provider)) return "Heffernan"
   if (/\btssm\b/.test(provider)) return "TSSM"
   return null
 }

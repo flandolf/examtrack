@@ -1,0 +1,112 @@
+import {
+  GraduationCap,
+  Search,
+} from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar"
+import type { AppView } from "@/lib/app-view"
+import { APP_NAVIGATION, SETTINGS_ITEM } from "@/lib/navigation"
+
+export function AppSidebar({
+  view,
+  dueMistakes,
+  syncLabel,
+  onViewChange,
+}: {
+  view: AppView
+  dueMistakes: number
+  syncLabel: string
+  onViewChange: (view: AppView) => void
+}) {
+  const { setOpenMobile } = useSidebar()
+
+  function navigate(nextView: AppView) {
+    onViewChange(nextView)
+    setOpenMobile(false)
+  }
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <button
+          type="button"
+          className="flex h-10 items-center gap-2 rounded-md px-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+          onClick={() => navigate("dashboard")}
+        >
+          <GraduationCap className="size-5 shrink-0" aria-hidden />
+          <span className="font-semibold group-data-[collapsible=icon]:hidden">ExamTrack</span>
+        </button>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Study</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {APP_NAVIGATION.map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton
+                    isActive={view === item.id}
+                    aria-current={view === item.id ? "page" : undefined}
+                    tooltip={item.label}
+                    onClick={() => navigate(item.id)}
+                  >
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                  {item.id === "mistakes" && dueMistakes > 0 ? (
+                    <SidebarMenuBadge aria-label={`${dueMistakes} mistakes due`}>{dueMistakes}</SidebarMenuBadge>
+                  ) : null}
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={view === SETTINGS_ITEM.id}
+              aria-current={view === SETTINGS_ITEM.id ? "page" : undefined}
+              tooltip={SETTINGS_ITEM.label}
+              onClick={() => navigate(SETTINGS_ITEM.id)}
+            >
+              <SETTINGS_ITEM.icon />
+              <span>{SETTINGS_ITEM.label}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <span className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">{syncLabel}</span>
+      </SidebarFooter>
+    </Sidebar>
+  )
+}
+
+export function CommandMenuTrigger({ onClick }: { onClick: () => void }) {
+  return (
+    <>
+      <Button variant="outline" size="sm" className="hidden min-w-40 justify-start text-muted-foreground sm:flex" onClick={onClick}>
+        <Search aria-hidden />
+        <span>Search actions</span>
+        <kbd className="ml-auto rounded border bg-muted px-1 font-sans text-[10px] text-muted-foreground">⌘K</kbd>
+      </Button>
+      <Button variant="ghost" size="icon-sm" className="sm:hidden" aria-label="Search pages and actions" onClick={onClick}>
+        <Search aria-hidden />
+      </Button>
+    </>
+  )
+}

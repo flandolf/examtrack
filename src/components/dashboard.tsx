@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from "react"
+import { lazy, Suspense, useMemo, useState } from "react"
 import {
   ArrowDownRight,
   ArrowRight,
@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   analyseAttempt,
   buildCoverage,
@@ -535,6 +536,7 @@ export function Dashboard(props: DashboardProps) {
     onAddMistake,
     onDeleteExam,
   } = props
+  const [section, setSection] = useState<"overview" | "insights">("overview")
   const nextAction = useMemo(
     () => pickNextAction(data, { onLogExam, onLogMistakeForLatest, onOpenMistakes, onOpenLibrary }),
     [data, onLogExam, onLogMistakeForLatest, onOpenMistakes, onOpenLibrary],
@@ -561,6 +563,7 @@ export function Dashboard(props: DashboardProps) {
             Log exam
           </Button>
         </PageHeader>
+        <NextActionNotice action={nextAction} />
         {deadlineSection}
         <Empty className="min-h-[24rem] border">
           <EmptyHeader>
@@ -596,57 +599,65 @@ export function Dashboard(props: DashboardProps) {
         </Button>
       </PageHeader>
 
-      <RecentExams data={data} references={references} comparisonYear={comparisonYear} onLogExam={onLogExam} />
-
-      {/* Deadlines and the next study action are both study signals -- stack them above stats. */}
-      {deadlineSection}
-      <NextActionNotice action={nextAction} />
-
-      <CoverageSummary data={data} />
-
-      <StatRow data={data} />
-
-      <ImprovementSignals data={data} />
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2">
-          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <PerformanceTrendChart attempts={data.attempts} references={references} preferredSubjects={data.subjects} difficultySettings={data.examDifficulty} />
-          </Suspense>
-        </div>
-        <div className="min-w-0">
-          <SubjectBreakdown data={data} references={references} />
-        </div>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
-          <SubjectBenchmarkChart attempts={data.attempts} references={references} mistakes={data.mistakes} />
-        </Suspense>
-        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
-          <VcaaPercentileTrendChart attempts={data.attempts} references={references} preferredSubjects={data.subjects} />
-        </Suspense>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
-          <ImprovementOutlookChart attempts={data.attempts} difficultySettings={data.examDifficulty} />
-        </Suspense>
-        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
-          <ReviewForecastChart mistakes={data.mistakes} />
-        </Suspense>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
-          <FocusPriorityChart attempts={data.attempts} mistakes={data.mistakes} />
-        </Suspense>
-        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
-          <RevisionPriorityChart mistakes={data.mistakes} />
-        </Suspense>
-      </div>
-
-      <ExamTable attempts={data.attempts} references={references} comparisonYear={comparisonYear} onComparisonYearChange={onComparisonYearChange} onEdit={onEditExam} onAddMistake={onAddMistake} onDelete={onDeleteExam} />
+      <Tabs value={section} onValueChange={(value) => setSection(value as "overview" | "insights")}>
+        <TabsList aria-label="Dashboard sections">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="mt-4">
+          {section === "overview" ? (
+            <div className="grid gap-6">
+              <NextActionNotice action={nextAction} />
+              {deadlineSection}
+              <StatRow data={data} />
+              <div className="grid gap-6 lg:grid-cols-3">
+                <div className="min-w-0 lg:col-span-2">
+                  <RecentExams data={data} references={references} comparisonYear={comparisonYear} onLogExam={onLogExam} />
+                </div>
+                <div className="min-w-0">
+                  <SubjectBreakdown data={data} references={references} />
+                </div>
+              </div>
+              <CoverageSummary data={data} />
+              <ExamTable attempts={data.attempts} references={references} comparisonYear={comparisonYear} onComparisonYearChange={onComparisonYearChange} onEdit={onEditExam} onAddMistake={onAddMistake} onDelete={onDeleteExam} />
+            </div>
+          ) : null}
+        </TabsContent>
+        <TabsContent value="insights" className="mt-4">
+          {section === "insights" ? (
+            <div className="grid gap-6">
+              <ImprovementSignals data={data} />
+              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <PerformanceTrendChart attempts={data.attempts} references={references} preferredSubjects={data.subjects} difficultySettings={data.examDifficulty} />
+              </Suspense>
+              <div className="grid gap-6 xl:grid-cols-2">
+                <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+                  <SubjectBenchmarkChart attempts={data.attempts} references={references} mistakes={data.mistakes} />
+                </Suspense>
+                <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+                  <VcaaPercentileTrendChart attempts={data.attempts} references={references} preferredSubjects={data.subjects} />
+                </Suspense>
+              </div>
+              <div className="grid gap-6 xl:grid-cols-2">
+                <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+                  <ImprovementOutlookChart attempts={data.attempts} difficultySettings={data.examDifficulty} />
+                </Suspense>
+                <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+                  <ReviewForecastChart mistakes={data.mistakes} />
+                </Suspense>
+              </div>
+              <div className="grid gap-6 xl:grid-cols-2">
+                <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+                  <FocusPriorityChart attempts={data.attempts} mistakes={data.mistakes} />
+                </Suspense>
+                <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+                  <RevisionPriorityChart mistakes={data.mistakes} />
+                </Suspense>
+              </div>
+            </div>
+          ) : null}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

@@ -1,16 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react"
 import {
-  ChartNoAxesCombined,
-  Clock3,
-  Calculator,
-  ClipboardCheck,
   Download,
-  GraduationCap,
-  LibraryBig,
-  BookOpenText,
   MoreHorizontal,
-  NotebookPen,
-  Settings2,
+  Plus,
   Upload,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -22,21 +14,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuBadge,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Toaster } from "@/components/ui/sonner"
@@ -48,19 +28,23 @@ import {
   type ReviewRating,
   removeAttempt,
   type AppData,
-  type AssessmentReference,
   type ExamAttempt,
   type Mistake,
 } from "@/lib/exam-data"
 import { downloadAppData, loadAppData, parseAppDataFile, saveAppData } from "@/lib/storage"
 import { useSupabaseSync } from "@/lib/sync"
-import { loadTimetable, suggestTimetableForAttempt, formatExamLabel, type Timetable } from "@/lib/timetable"
-import type { ScalingReference } from "@/lib/scaling"
+import { suggestTimetableForAttempt, formatExamLabel } from "@/lib/timetable"
 import { ExamTrackerPicker } from "@/components/exam-tracker-picker"
 import type { ExamTimerPreset } from "@/components/exam-timer"
-import type { VcaaStudyResources } from "@/lib/vcaa-resources"
 import type { ExamDifficultySettings } from "@/lib/exam-difficulty"
 import type { SacRecord } from "@/lib/sac"
+import { loadAppView, saveAppView, type AppView } from "@/lib/app-view"
+import {
+  AppSidebar,
+  CommandMenuTrigger,
+} from "@/components/app-navigation"
+import { getViewLabel } from "@/lib/navigation"
+import { useReferenceData } from "@/hooks/use-reference-data"
 
 const ExamSheet = lazy(() =>
   import("@/components/exam-sheet").then((module) => ({ default: module.ExamSheet })),
@@ -92,96 +76,32 @@ const MistakesPage = lazy(() =>
 const SacPage = lazy(() =>
   import("@/components/sac-page").then((module) => ({ default: module.SacPage })),
 )
-
-type View = "dashboard" | "sacs" | "library" | "timer" | "mistakes" | "predictor" | "vcaa" | "settings"
-
-const NAVIGATION = [
-  { id: "dashboard" as const, label: "Dashboard", icon: ChartNoAxesCombined },
-  { id: "sacs" as const, label: "SACs", icon: ClipboardCheck },
-  { id: "library" as const, label: "Exam library", icon: BookOpenText },
-  { id: "timer" as const, label: "Exam timer", icon: Clock3 },
-  { id: "mistakes" as const, label: "Mistakes", icon: NotebookPen },
-  { id: "predictor" as const, label: "Study score", icon: Calculator },
-  { id: "vcaa" as const, label: "VCAA data", icon: LibraryBig },
-]
-const SETTINGS_ITEM = { id: "settings" as const, label: "Settings", icon: Settings2 }
-
-function AppSidebar({ view, data, syncLabel, onViewChange }: { view: View; data: AppData; syncLabel: string; onViewChange: (view: View) => void }) {
-  const { setOpenMobile } = useSidebar()
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex h-10 items-center gap-2 px-2">
-          <GraduationCap className="size-5 shrink-0" />
-          <span className="font-semibold group-data-[collapsible=icon]:hidden">ExamTrack</span>
-        </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Study</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {NAVIGATION.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton
-                    isActive={view === item.id}
-                    tooltip={item.label}
-                    onClick={() => {
-                      onViewChange(item.id)
-                      setOpenMobile(false)
-                    }}
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                  {item.id === "mistakes" ? <SidebarMenuBadge>{getDueMistakes(data.mistakes).length}</SidebarMenuBadge> : null}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={view === SETTINGS_ITEM.id}
-              tooltip={SETTINGS_ITEM.label}
-              onClick={() => {
-                onViewChange(SETTINGS_ITEM.id)
-                setOpenMobile(false)
-              }}
-            >
-              <SETTINGS_ITEM.icon />
-              <span>{SETTINGS_ITEM.label}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <span className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">{syncLabel}</span>
-      </SidebarFooter>
-    </Sidebar>
-  )
-}
+const AppCommandMenu = lazy(() =>
+  import("@/components/app-command-menu").then((module) => ({ default: module.AppCommandMenu })),
+)
 
 export default function App() {
-  const [view, setView] = useState<View>("dashboard")
+  const [view, setView] = useState<AppView>(() => loadAppView(typeof localStorage === "undefined" ? null : localStorage))
   const [data, setData] = useState<AppData>(() => (typeof localStorage === "undefined" ? EMPTY_APP_DATA : loadAppData()))
-  const [references, setReferences] = useState<AssessmentReference[]>([])
-  const [referencesGeneratedAt, setReferencesGeneratedAt] = useState<string | null>(null)
-  const [resourceStudies, setResourceStudies] = useState<VcaaStudyResources[]>([])
-  const [resourcesGeneratedAt, setResourcesGeneratedAt] = useState<string | null>(null)
   const [timerPreset, setTimerPreset] = useState<ExamTimerPreset | null>(null)
-  const [scalingReferences, setScalingReferences] = useState<ScalingReference[]>([])
   const [comparisonYear, setComparisonYear] = useState(2025)
   const [examOpen, setExamOpen] = useState(false)
   const [editingAttempt, setEditingAttempt] = useState<ExamAttempt | null>(null)
   const [mistakeOpen, setMistakeOpen] = useState(false)
   const [mistakeAttemptId, setMistakeAttemptId] = useState<string | null>(null)
   const [editingMistake, setEditingMistake] = useState<Mistake | null>(null)
-  const [timetable, setTimetable] = useState<Timetable | null>(null)
   const [trackerOpen, setTrackerOpen] = useState(false)
+  const [commandOpen, setCommandOpen] = useState(false)
   const importInput = useRef<HTMLInputElement>(null)
   const sync = useSupabaseSync(data, setData)
+  const {
+    references,
+    referencesGeneratedAt,
+    resourceStudies,
+    resourcesGeneratedAt,
+    scalingReferences,
+    timetable,
+  } = useReferenceData()
 
   const subjectExamIds = useMemo(() => {
     if (!timetable) return []
@@ -195,46 +115,17 @@ export default function App() {
   }, [data.attempts, data.trackedExamIds, timetable])
 
   useEffect(() => saveAppData(data), [data])
+  useEffect(() => saveAppView(typeof localStorage === "undefined" ? null : localStorage, view), [view])
   useEffect(() => {
-    fetch("/vcaa-grade-distributions.json")
-      .then((response) => {
-        if (!response.ok) throw new Error("Reference data request failed")
-        return response.json() as Promise<{ generatedAt?: string; assessments?: AssessmentReference[] }>
-      })
-      .then((result) => {
-        setReferences(Array.isArray(result.assessments) ? result.assessments : [])
-        setReferencesGeneratedAt(typeof result.generatedAt === "string" ? result.generatedAt : null)
-      })
-      .catch(() => setReferences([]))
-  }, [])
-  useEffect(() => {
-    fetch("/vcaa-exam-resources.json")
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Resource request failed")))
-      .then((result: { generatedAt?: string; studies?: VcaaStudyResources[] }) => {
-        setResourceStudies(Array.isArray(result.studies) ? result.studies : [])
-        setResourcesGeneratedAt(typeof result.generatedAt === "string" ? result.generatedAt : null)
-      })
-      .catch(() => setResourceStudies([]))
-  }, [])
-  useEffect(() => {
-    fetch("/vtac-scaling-reports.json")
-      .then((response) => {
-        if (!response.ok) throw new Error("Scaling reference data request failed")
-        return response.json() as Promise<{ references?: ScalingReference[] }>
-      })
-      .then((result) => setScalingReferences(Array.isArray(result.references) ? result.references : []))
-      .catch(() => setScalingReferences([]))
-  }, [])
-  useEffect(() => {
-    let cancelled = false
-    loadTimetable().then((result) => {
-      if (!cancelled) setTimetable(result)
-    })
-    return () => {
-      cancelled = true
+    const openCommandMenu = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        setCommandOpen((current) => !current)
+      }
     }
+    document.addEventListener("keydown", openCommandMenu)
+    return () => document.removeEventListener("keydown", openCommandMenu)
   }, [])
-
   function saveAttempt(attempt: ExamAttempt, logMistake = false) {
     const isNew = !editingAttempt
     setData((current) => ({
@@ -344,6 +235,17 @@ export default function App() {
     setMistakeOpen(true)
   }
 
+  function openNewExam() {
+    setEditingAttempt(null)
+    setExamOpen(true)
+  }
+
+  function openNewMistake(attemptId: string | null = null) {
+    setEditingMistake(null)
+    setMistakeAttemptId(attemptId)
+    setMistakeOpen(true)
+  }
+
   function deleteAttempt(attempt: ExamAttempt) {
     const related = data.mistakes.filter((mistake) => mistake.attemptId === attempt.id)
     setData((current) => removeAttempt(current, attempt.id))
@@ -424,12 +326,23 @@ export default function App() {
   return (
     <SidebarProvider>
       <a href="#main-content" className="fixed left-2 top-2 z-50 -translate-y-20 rounded-md bg-background px-3 py-2 text-sm shadow focus:translate-y-0">Skip to content</a>
-      <AppSidebar view={view} data={data} syncLabel={sync.user ? "Synced with Supabase" : "Stored on this device"} onViewChange={setView} />
+      <AppSidebar
+        view={view}
+        dueMistakes={getDueMistakes(data.mistakes).length}
+        syncLabel={sync.user ? "Synced with Supabase" : "Stored on this device"}
+        onViewChange={setView}
+      />
       <SidebarInset className="min-w-0">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80">
           <SidebarTrigger />
-          <span className="text-sm font-medium">{[...NAVIGATION, SETTINGS_ITEM].find((item) => item.id === view)?.label}</span>
-          <div className="ml-auto flex gap-1">
+          <span className="text-sm font-medium">{getViewLabel(view)}</span>
+          <div className="ml-auto flex items-center gap-1">
+            <CommandMenuTrigger onClick={() => setCommandOpen(true)} />
+            <Button size="sm" onClick={openNewExam}>
+              <Plus />
+              <span className="hidden sm:inline">Log exam</span>
+              <span className="sr-only sm:hidden">Log exam</span>
+            </Button>
             <ModeToggle />
             <input ref={importInput} className="sr-only" type="file" accept="application/json" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importData(file); event.currentTarget.value = "" }} />
             <DropdownMenu>
@@ -450,21 +363,18 @@ export default function App() {
                 comparisonYear={comparisonYear}
                 onComparisonYearChange={setComparisonYear}
                 timetable={timetable}
-                onLogExam={() => {
-                  setEditingAttempt(null)
-                  setExamOpen(true)
-                }}
+                onLogExam={openNewExam}
                 onLogMistakeForLatest={logMistakeForLatest}
                 onOpenMistakes={() => setView("mistakes")}
                 onOpenLibrary={() => setView("library")}
                 onOpenTracker={() => setTrackerOpen(true)}
                 onEditExam={(attempt) => { setEditingAttempt(attempt); setExamOpen(true) }}
-                onAddMistake={(id) => { setEditingMistake(null); setMistakeAttemptId(id); setMistakeOpen(true) }}
+                onAddMistake={openNewMistake}
                 onDeleteExam={deleteAttempt}
               />
             </Suspense>
           ) : null}
-          {view === "mistakes" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><MistakesPage data={data} studies={resourceStudies} onLog={() => { setEditingMistake(null); setMistakeAttemptId(null); setMistakeOpen(true) }} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onReview={reviewMistake} onToggleSuspend={toggleMistakeSuspension} onDelete={deleteMistake} onSaveInsights={(mistakeInsights) => setData((current) => ({ ...current, mistakeInsights }))} /></Suspense> : null}
+          {view === "mistakes" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><MistakesPage data={data} studies={resourceStudies} onLog={() => openNewMistake()} onEdit={(mistake) => { setEditingMistake(mistake); setMistakeOpen(true) }} onReview={reviewMistake} onToggleSuspend={toggleMistakeSuspension} onDelete={deleteMistake} onSaveInsights={(mistakeInsights) => setData((current) => ({ ...current, mistakeInsights }))} /></Suspense> : null}
           {view === "sacs" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SacPage records={data.sacRecords} subjects={references.map((reference) => reference.studyName)} preferredSubjects={data.subjects} onSave={saveSac} onDelete={deleteSac} /></Suspense> : null}
           {view === "library" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamLibrary references={references} studies={resourceStudies} attempts={data.attempts} completedExamIds={data.completedExamIds} generatedAt={resourcesGeneratedAt ?? referencesGeneratedAt} preferredSubjects={data.subjects} onToggleCompleted={toggleCompletedExam} onStart={(preset) => { setTimerPreset(preset); setView("timer") }} /></Suspense> : null}
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer key={timerPreset ? `${timerPreset.subject}-${timerPreset.examYear}-${timerPreset.paper}` : "manual"} references={references} studies={resourceStudies} preferredSubjects={data.subjects} initialExam={timerPreset} onSave={(attempt) => { setTimerPreset(null); saveTimedAttempt(attempt) }} /></Suspense> : null}
@@ -495,6 +405,19 @@ export default function App() {
           subjectMatchCount={subjectExamIds.length}
           trackedCount={data.trackedExamIds.length}
         />
+      ) : null}
+      {commandOpen ? (
+        <Suspense fallback={null}>
+          <AppCommandMenu
+            open
+            onOpenChange={setCommandOpen}
+            onViewChange={setView}
+            onLogExam={openNewExam}
+            onLogMistake={() => openNewMistake()}
+            onExport={() => downloadAppData(data)}
+            onImport={() => importInput.current?.click()}
+          />
+        </Suspense>
       ) : null}
       <Toaster position="bottom-right" />
     </SidebarProvider>

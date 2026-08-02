@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AtarEstimator } from "@/components/atar-estimator"
 import { PageHeader } from "@/components/page-header"
 import { SubjectCombobox } from "@/components/subject-combobox"
+import { StudyScoreTrendChart } from "@/components/study-score-trend-chart"
 import type { AppData, AssessmentReference } from "@/lib/exam-data"
-import { defaultExamWeight, predictStudyScore } from "@/lib/study-score"
+import { buildStudyScoreTrend, defaultExamWeight, predictStudyScore } from "@/lib/study-score"
 import { prioritiseSubjects } from "@/lib/subjects"
 import { normaliseScalingStudyName, predictScaledStudyScore, type ScalingReference } from "@/lib/scaling"
 
@@ -50,6 +51,16 @@ export function StudyScorePredictor({
   const parsedSac = sacPercentile.trim() === "" ? null : Number(sacPercentile)
   const prediction = useMemo(
     () => predictStudyScore({
+      subject,
+      attempts: data.attempts,
+      references,
+      sacPercentile: parsedSac !== null && Number.isFinite(parsedSac) ? parsedSac : null,
+      examWeightPercent: examWeight,
+    }),
+    [data.attempts, examWeight, parsedSac, references, subject],
+  )
+  const studyScoreTrend = useMemo(
+    () => buildStudyScoreTrend({
       subject,
       attempts: data.attempts,
       references,
@@ -216,6 +227,8 @@ export function StudyScorePredictor({
                   </CardContent>
                 </Card>
 
+                <StudyScoreTrendChart points={studyScoreTrend} />
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Evidence used</CardTitle>
@@ -236,7 +249,7 @@ export function StudyScorePredictor({
                       {[...prediction.evidence].reverse().map(({ attempt, percentile, weight, referenceYear, exactReferenceYear }) => (
                         <li key={attempt.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">{attempt.title} · {attempt.paper}</p>
+                            <p className="truncate text-sm font-medium">{attempt.title} · {attempt.paper} · {attempt.examYear}</p>
                             <p className="text-xs text-muted-foreground">
                               {attempt.completedAt} · {(attempt.rawScore / attempt.rawMax * 100).toFixed(1)}%
                               {!exactReferenceYear ? ` · using ${referenceYear} distribution` : ""}

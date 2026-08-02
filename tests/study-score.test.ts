@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { AssessmentReference, ExamAttempt } from "../src/lib/exam-data"
-import { inverseNormalCdf, percentileToRawStudyScore, predictStudyScore } from "../src/lib/study-score"
+import { buildStudyScoreTrend, inverseNormalCdf, percentileToRawStudyScore, predictStudyScore } from "../src/lib/study-score"
 
 const reference: AssessmentReference = {
   id: "METHODS:2025:GA-2",
@@ -121,13 +121,28 @@ describe("study score prediction", () => {
     expect(prediction?.combinedPercentile).toBeCloseTo(92, 8)
   })
 
+  test("builds a cumulative estimate after each completed attempt", () => {
+    const trend = buildStudyScoreTrend({
+      subject: "Mathematical Methods",
+      attempts: [attempt("one", 32, "2026-06-01"), attempt("two", 40, "2026-07-01")],
+      references: [reference],
+      sacPercentile: 80,
+    })
+
+    expect(trend).toHaveLength(2)
+    expect(trend[0]?.evidenceCount).toBe(1)
+    expect(trend[1]?.evidenceCount).toBe(2)
+    expect(trend[1]?.timestamp).toBeGreaterThan(trend[0]?.timestamp ?? 0)
+    expect(trend[1]?.studyScore).toBeGreaterThanOrEqual(trend[0]?.studyScore ?? 0)
+  })
+
   test("uses every historical Methods paper with the nearest available distribution", () => {
     const distributionYears = [2006, 2007, 2009]
     const historicalReferences = distributionYears.flatMap((year) => [
       { ...reference, id: `METHODS:${year}:GA-2`, year },
       { ...reference2, id: `METHODS:${year}:GA-3`, year },
     ])
-    const historicalAttempts = [2006, 2007, 2008, 2009, 2010, 2011].flatMap((year, index) => {
+    const historicalAttempts = [2006, 2007, 2008, 2009, 2010, 2011, 2012].flatMap((year, index) => {
       const completedAt = `2026-07-${String(index + 1).padStart(2, "0")}`
       return [
         attempt(`${year}-1`, 32, completedAt, {
@@ -149,14 +164,41 @@ describe("study score prediction", () => {
       references: historicalReferences,
     })
 
-    expect(prediction?.evidence).toHaveLength(12)
+    expect(prediction?.evidence).toHaveLength(14)
     expect(prediction?.excludedAttemptCount).toBe(0)
-    expect(prediction?.approximatedEvidenceCount).toBe(6)
+    expect(prediction?.approximatedEvidenceCount).toBe(8)
     const evidence = new Map(prediction?.evidence.map((item) => [item.attempt.id, item]))
     expect(evidence.get("2008-1")).toMatchObject({ referenceYear: 2009, exactReferenceYear: false })
     expect(evidence.get("2010-2")).toMatchObject({ referenceYear: 2009, exactReferenceYear: false })
     expect(evidence.get("2011-1")).toMatchObject({ referenceYear: 2009, exactReferenceYear: false })
+    expect(evidence.get("2012-1")).toMatchObject({ referenceYear: 2009, exactReferenceYear: false })
     expect(evidence.get("2007-2")).toMatchObject({ referenceYear: 2007, exactReferenceYear: true })
+  })
+
+  test("keeps generic and embellished paper labels linked to the intended paper", () => {
+    const generic = predictStudyScore({
+      subject: "Mathematical Methods",
+      attempts: [attempt("generic", 32, "2026-07-01", {
+        paper: "Exam",
+        examYear: 2025,
+        referenceId: reference.id,
+      })],
+      references: [reference, reference2],
+    })
+    const embellished = predictStudyScore({
+      subject: "Mathematical Methods",
+      attempts: [attempt("embellished", 32, "2026-07-01", {
+        paper: "Exam 1 - calculator allowed",
+        examYear: 2025,
+        referenceId: null,
+      })],
+      references: [reference, reference2],
+    })
+
+    expect(generic?.evidence).toHaveLength(1)
+    expect(generic?.evidence[0]?.attempt.id).toBe("generic")
+    expect(embellished?.evidence).toHaveLength(1)
+    expect(embellished?.evidence[0]?.attempt.id).toBe("embellished")
   })
 
   test("matches the legacy Mathematical Methods CAS subject name", () => {

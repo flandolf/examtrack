@@ -38,6 +38,18 @@ export type StudyScorePrediction = {
   excludedAttemptCount: number
 }
 
+export type StudyScoreTrendPoint = {
+  attempt: ExamAttempt
+  timestamp: number
+  dateLabel: string
+  studyScore: number
+  low: number
+  high: number
+  evidenceCount: number
+  referenceYear: number
+  exactReferenceYear: boolean
+}
+
 type UnweightedEvidence = Omit<StudyScoreEvidence, "weight">
 
 function clamp(value: number, minimum: number, maximum: number) {
@@ -95,11 +107,28 @@ function sameStudy(first: string, second: string) {
 
 function compatibleReferences(attempt: ExamAttempt, references: AssessmentReference[]) {
   const subjectReferences = references.filter((reference) => sameStudy(reference.studyName, attempt.subject))
+
+  const explicitlyLinked = attempt.referenceId
+    ? subjectReferences.find((reference) => reference.id === attempt.referenceId)
+    : undefined
+
   const paper = normaliseComparisonName(attempt.paper)
   const paperMatches = subjectReferences.filter(
     (reference) => normaliseComparisonName(reference.name) === paper,
   )
   if (paperMatches.length) return paperMatches
+
+  // Keep matching by paper number when a user-entered label contains extra
+  // words (for example, "Exam 1 - calculator allowed").
+  const number = paperNumber(attempt.paper)
+  if (number !== null) {
+    const numberedMatches = subjectReferences.filter((reference) => paperNumber(reference.name) === number)
+    if (numberedMatches.length) return numberedMatches
+  }
+
+  // A saved link is the most reliable fallback. This also preserves attempts
+  // whose paper was recorded with a generic label such as "Exam".
+  if (explicitlyLinked) return [explicitlyLinked]
 
   const countByYear = new Map<number, number>()
   for (const reference of subjectReferences) {
@@ -115,20 +144,21 @@ function findStudyScoreReference(attempt: ExamAttempt, references: AssessmentRef
   const exact = candidates.find((reference) => reference.year === attempt.examYear)
   if (exact) return exact
 
-  const explicitlyLinked = attempt.referenceId
-    ? candidates.find((reference) => reference.id === attempt.referenceId)
-    : undefined
-  if (explicitlyLinked) return explicitlyLinked
-
   return candidates.toSorted((first, second) =>
     Math.abs(first.year - attempt.examYear) - Math.abs(second.year - attempt.examYear) ||
     second.year - first.year
   )[0]
 }
 
+function compareAttempts(first: ExamAttempt, second: ExamAttempt) {
+  return first.completedAt.localeCompare(second.completedAt) ||
+    first.createdAt.localeCompare(second.createdAt) ||
+    first.id.localeCompare(second.id)
+}
+
 function weightEvidence(items: UnweightedEvidence[]): StudyScoreEvidence[] {
   return items
-    .toSorted((first, second) => first.attempt.completedAt.localeCompare(second.attempt.completedAt))
+    .toSorted((first, second) => compareAttempts(first.attempt, second.attempt))
     .map((item, index) => ({
       ...item,
       weight: 0.82 ** (items.length - index - 1),
@@ -264,4 +294,50 @@ export function predictStudyScore({
     approximatedEvidenceCount: evidence.filter((item) => !item.exactReferenceYear).length,
     excludedAttemptCount: subjectAttempts.length - linked.length,
   }
+}
+
+export function buildStudyScoreTrend({
+  subject,
+  attempts,
+  references,
+  sacPercentile,
+  examWeightPercent = defaultExamWeight(subject),
+}: {
+  subject: string
+  attempts: ExamAttempt[]
+  references: AssessmentReference[]
+  sacPercentile?: number | null
+  examWeightPercent?: number
+}): StudyScoreTrendPoint[] {
+  const orderedAttempts = attempts
+    .filter((attempt) => sameStudy(attempt.subject, subject))
+    .toSorted(compareAttempts)
+
+  return orderedAttempts.flatMap((attempt, index) => {
+    const prediction = predictStudyScore({
+      subject,
+      attempts: orderedAttempts.slice(0, index + 1),
+      references,
+      sacPercentile,
+      examWeightPercent,
+    })
+    const evidence = prediction?.evidence.find((item) => item.attempt.id === attempt.id)
+    if (!prediction || !evidence) return []
+
+    const date = new Date(`${attempt.completedAt}T00:00:00`)
+    const timestamp = date.getTime()
+    return [{
+      attempt,
+      timestamp,
+      dateLabel: Number.isFinite(timestamp)
+        ? date.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })
+        : attempt.completedAt,
+      studyScore: prediction.studyScore,
+      low: prediction.low,
+      high: prediction.high,
+      evidenceCount: prediction.evidence.length,
+      referenceYear: evidence.referenceYear,
+      exactReferenceYear: evidence.exactReferenceYear,
+    }]
+  })
 }

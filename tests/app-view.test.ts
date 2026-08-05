@@ -20,6 +20,8 @@ describe("app view preferences", () => {
     expect(loadAppView({ getItem: () => "removed-view" })).toBe("dashboard")
     expect(loadAppView({ getItem: () => { throw new Error("blocked") } })).toBe("dashboard")
     expect(loadAppView(null)).toBe("dashboard")
+    expect(loadAppView(null, "?timer=exam")).toBe("timer")
+    expect(loadAppView(null, "?timer=sac")).toBe("sacs")
   })
 
   test("persists navigation without making storage availability fatal", () => {

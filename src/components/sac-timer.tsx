@@ -13,6 +13,14 @@ import { SubjectCombobox } from "@/components/subject-combobox"
 import { useTickingNow } from "@/hooks/use-ticking-now"
 import { formatTimer } from "@/lib/exam-timer"
 import { getSacTimerState, validateSac, type SacRecord, type SacUnit } from "@/lib/sac"
+import {
+  createFocalTimerLink,
+  isFocalTimerLink,
+  pauseFocalTimer,
+  publishFocalTimer,
+  resumeFocalTimer,
+  type FocalTimerLink,
+} from "@/lib/focal-timer"
 import { prioritiseSubjects } from "@/lib/subjects"
 
 type SacTimerSession = {
@@ -32,6 +40,7 @@ type SacTimerSession = {
   startedAt: number
   pausedAt?: number
   pausedSeconds: number
+  focal?: FocalTimerLink
 }
 
 type SacTimerProps = {
@@ -54,7 +63,8 @@ function loadSession(): SacTimerSession | null {
       (value.unit === 3 || value.unit === 4) && typeof value.scheduledAt === "string" &&
       typeof value.durationMinutes === "number" && typeof value.maxScore === "number" &&
       typeof value.startedAt === "number" && typeof value.pausedSeconds === "number" &&
-      (value.pausedAt === undefined || typeof value.pausedAt === "number")
+      (value.pausedAt === undefined || typeof value.pausedAt === "number") &&
+      (value.focal === undefined || isFocalTimerLink(value.focal))
       ? value as SacTimerSession
       : null
   } catch {
@@ -88,6 +98,7 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
     const validationError = validateSac({ subject, provider, title, unit, scheduledAt, durationMinutes, maxScore: undefined, score: undefined, weighting: initialRecord?.weighting }) ??
       (!Number.isFinite(maxScore) || maxScore <= 0 ? "Total marks must be greater than zero." : null)
     if (validationError) return setError(validationError)
+    const focal = createFocalTimerLink("sac", subject, title, durationMinutes * 60)
     const next: SacTimerSession = {
       recordId: initialRecord?.id,
       subject: subject.trim(),
@@ -104,34 +115,42 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
       createdAt: initialRecord?.createdAt,
       startedAt: Date.now(),
       pausedSeconds: 0,
+      focal,
     }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setSession(next)
     setError(null)
+    void publishFocalTimer(focal, "in-progress")
   }
 
   function pause() {
     if (!session || session.pausedAt) return
-    const next = { ...session, pausedAt: Date.now() }
+    const focal = session.focal ? pauseFocalTimer(session.focal) : undefined
+    const next = { ...session, pausedAt: Date.now(), focal }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setSession(next)
+    if (focal) void publishFocalTimer(focal, "in-progress")
   }
 
   function resume() {
     if (!session?.pausedAt) return
     const pauseDuration = Date.now() - session.pausedAt
+    const focal = session.focal ? resumeFocalTimer(session.focal) : undefined
     const next = {
       ...session,
       startedAt: session.startedAt + pauseDuration,
       pausedAt: undefined,
       pausedSeconds: session.pausedSeconds + Math.floor(pauseDuration / 1000),
+      focal,
     }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setSession(next)
+    if (focal) void publishFocalTimer(focal, "in-progress")
   }
 
   function discard() {
     if (!window.confirm("Discard this timed SAC and return to setup?")) return
+    if (session?.focal) void publishFocalTimer(session.focal, "delete")
     sessionStorage.removeItem(STORAGE_KEY)
     setSession(null)
     setMarkingOpen(false)
@@ -189,6 +208,7 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
       createdAt: existing?.createdAt ?? session.createdAt ?? timestamp,
       updatedAt: timestamp,
     })
+    if (session.focal) void publishFocalTimer(session.focal, "completed")
     sessionStorage.removeItem(STORAGE_KEY)
     setSession(null)
     setMarkingOpen(false)
@@ -235,6 +255,7 @@ export function SacTimer({ records, subjects, preferredSubjects, initialRecord, 
         <div><h2 className="text-xl font-semibold">{session.title}</h2><p className="text-sm text-muted-foreground">{session.subject} · {session.provider}{session.sacNumber ? ` · SAC ${session.sacNumber}` : ""} · Unit {session.unit} · {session.durationMinutes} min · {session.maxScore} marks</p></div>
         <div className="flex flex-wrap gap-2"><Button variant="ghost" onClick={discard}><RotateCcw />Discard</Button><Button variant="outline" onClick={session.pausedAt ? resume : pause}>{session.pausedAt ? <Play /> : <Pause />}{session.pausedAt ? "Resume" : "Pause"}</Button><Button onClick={openMarking}><Check />Finish & mark</Button></div>
       </div>
+      {session.focal ? <Alert><Clock3 /><AlertTitle>Focal study logging active</AlertTitle><AlertDescription>Start, pause, resume, and finish are mirrored to Focal when your shared account is online.</AlertDescription></Alert> : null}
       <section className="grid gap-6 py-8 text-center">
         <div><p className={overtime ? "text-sm font-medium text-destructive" : "text-sm font-medium text-muted-foreground"}>{overtime ? "Overtime" : session.pausedAt ? "Paused" : "Time remaining"}</p><p role="timer" className={overtime ? "mt-2 text-7xl font-semibold tracking-tight text-destructive tabular-nums sm:text-8xl" : "mt-2 text-7xl font-semibold tracking-tight tabular-nums sm:text-8xl"}>{overtime ? `+${formatTimer(timer.overtimeSeconds)}` : formatTimer(timer.remainingSeconds)}</p></div>
         <Progress value={timer.progress} className="mx-auto w-full max-w-2xl"><ProgressLabel>{overtime ? "Time elapsed" : "SAC progress"}</ProgressLabel><span className="ml-auto text-sm text-muted-foreground tabular-nums">{Math.round(timer.progress)}%</span></Progress>

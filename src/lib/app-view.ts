@@ -17,7 +17,13 @@ export function isAppView(value: unknown): value is AppView {
   return typeof value === "string" && APP_VIEWS.includes(value as AppView)
 }
 
-export function loadAppView(storage: Pick<Storage, "getItem"> | null | undefined): AppView {
+export function loadAppView(
+  storage: Pick<Storage, "getItem"> | null | undefined,
+  search = "",
+): AppView {
+  const timer = new URLSearchParams(search).get("timer")
+  if (timer === "exam") return "timer"
+  if (timer === "sac") return "sacs"
   if (!storage) return "dashboard"
   try {
     const stored = storage.getItem(APP_VIEW_STORAGE_KEY)

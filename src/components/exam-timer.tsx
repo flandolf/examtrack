@@ -22,6 +22,14 @@ import { useTickingNow } from "@/hooks/use-ticking-now"
 import { formatExamTitle, formatReferenceName, validateAttempt, validateQuestionResults, type AssessmentReference, type ExamAttempt, type QuestionResult } from "@/lib/exam-data"
 import { buildCompanyExamSuggestions, buildExamSuggestions, findLatestAttempt, type ExamSuggestion } from "@/lib/exam-suggestions"
 import { formatTimer, getExamTimerState } from "@/lib/exam-timer"
+import {
+  createFocalTimerLink,
+  isFocalTimerLink,
+  pauseFocalTimer,
+  publishFocalTimer,
+  resumeFocalTimer,
+  type FocalTimerLink,
+} from "@/lib/focal-timer"
 import { loadAppData } from "@/lib/storage"
 import { firstPreferredSubject, prioritiseSubjects } from "@/lib/subjects"
 import type { VcaaStudyResources } from "@/lib/vcaa-resources"
@@ -38,6 +46,7 @@ type TimerSession = {
   startedAt: number
   pausedAt?: number
   pausedSeconds: number
+  focal?: FocalTimerLink
 }
 
 export type ExamTimerPreset = Pick<TimerSession, "subject" | "provider" | "examYear" | "paper" | "marks"> & Partial<Pick<TimerSession, "readingMinutes" | "writingMinutes">>
@@ -61,7 +70,8 @@ function loadSession(): TimerSession | null {
       typeof value.startedAt === "number" && typeof value.readingMinutes === "number" &&
       typeof value.writingMinutes === "number" && typeof value.marks === "number" &&
       (value.pausedAt === undefined || typeof value.pausedAt === "number") &&
-      (value.pausedSeconds === undefined || typeof value.pausedSeconds === "number")
+      (value.pausedSeconds === undefined || typeof value.pausedSeconds === "number") &&
+      (value.focal === undefined || isFocalTimerLink(value.focal))
       ? value as TimerSession
       : null
   } catch {
@@ -141,17 +151,25 @@ export function ExamTimer({ references, studies, preferredSubjects, initialExam,
 
   function start(event: FormEvent) {
     event.preventDefault()
+    const focal = createFocalTimerLink(
+      "exam",
+      subject,
+      formatExamTitle(provider, examYear, subject),
+      (readingMinutes + writingMinutes) * 60,
+    )
     const next = {
       subject: subject.trim(), provider: provider.trim(), title: formatExamTitle(provider, examYear, subject), examYear, paper: paper.trim(),
-      readingMinutes, writingMinutes, marks, startedAt: Date.now(), pausedSeconds: 0,
+      readingMinutes, writingMinutes, marks, startedAt: Date.now(), pausedSeconds: 0, focal,
     }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setSession(next)
     setRawMax(marks)
+    void publishFocalTimer(focal, "in-progress")
   }
 
   function reset() {
     if (timer?.phase !== "overtime" && !window.confirm("Discard this timed exam and return to setup?")) return
+    if (session?.focal) void publishFocalTimer(session.focal, "delete")
     sessionStorage.removeItem(STORAGE_KEY)
     setSession(null)
     setMarkingOpen(false)
@@ -166,17 +184,21 @@ export function ExamTimer({ references, studies, preferredSubjects, initialExam,
 
   function pause() {
     if (!session || session.pausedAt) return
-    const next = { ...session, pausedAt: Date.now() }
+    const focal = session.focal ? pauseFocalTimer(session.focal) : undefined
+    const next = { ...session, pausedAt: Date.now(), focal }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setSession(next)
+    if (focal) void publishFocalTimer(focal, "in-progress")
   }
 
   function resume() {
     if (!session?.pausedAt) return
     const pauseDuration = Date.now() - session.pausedAt
-    const next = { ...session, startedAt: session.startedAt + pauseDuration, pausedAt: undefined, pausedSeconds: (session.pausedSeconds ?? 0) + Math.floor(pauseDuration / 1000) }
+    const focal = session.focal ? resumeFocalTimer(session.focal) : undefined
+    const next = { ...session, startedAt: session.startedAt + pauseDuration, pausedAt: undefined, pausedSeconds: (session.pausedSeconds ?? 0) + Math.floor(pauseDuration / 1000), focal }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setSession(next)
+    if (focal) void publishFocalTimer(focal, "in-progress")
   }
 
   function openMarking() {
@@ -226,6 +248,7 @@ export function ExamTimer({ references, studies, preferredSubjects, initialExam,
       createdAt: timestamp,
       updatedAt: timestamp,
     })
+    if (session.focal) void publishFocalTimer(session.focal, "completed")
     sessionStorage.removeItem(STORAGE_KEY)
     setMarkingOpen(false)
     setSession(null)
@@ -337,6 +360,8 @@ export function ExamTimer({ references, studies, preferredSubjects, initialExam,
         <Button variant="outline" onClick={session.pausedAt ? resume : pause}>{session.pausedAt ? <Play /> : <Pause />}{session.pausedAt ? "Resume" : "Pause"}</Button>
         <Button onClick={openMarking}><Check />Finish & mark</Button>
       </PageHeader>
+
+      {session.focal ? <Alert><Clock3 /><AlertTitle>Focal study logging active</AlertTitle><AlertDescription>Start, pause, resume, and finish are mirrored to Focal when your shared account is online.</AlertDescription></Alert> : null}
 
       <section className="grid gap-6 py-6 text-center">
         <div>

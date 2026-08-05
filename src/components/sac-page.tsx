@@ -91,7 +91,12 @@ function SacTrend({ records }: { records: SacRecord[] }) {
 }
 
 export function SacPage({ records, subjects, preferredSubjects, onSave, onDelete }: SacPageProps) {
-  const [tab, setTab] = useState<"overview" | "timer">(() => typeof sessionStorage !== "undefined" && sessionStorage.getItem("examtrack.sac-timer") ? "timer" : "overview")
+  const [tab, setTab] = useState<"overview" | "timer">(() =>
+    typeof sessionStorage !== "undefined" && (
+      sessionStorage.getItem("examtrack.sac-timer") ||
+      new URLSearchParams(location.search).get("timer") === "sac"
+    ) ? "timer" : "overview"
+  )
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<SacRecord | null>(null)
   const [timerRecord, setTimerRecord] = useState<SacRecord | null>(null)

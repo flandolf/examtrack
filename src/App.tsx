@@ -33,6 +33,7 @@ import {
 } from "@/lib/exam-data"
 import { downloadAppData, loadAppData, parseAppDataFile, saveAppData } from "@/lib/storage"
 import { useSupabaseSync } from "@/lib/sync"
+import { flushFocalTimerOutbox } from "@/lib/focal-timer"
 import { suggestTimetableForAttempt, formatExamLabel } from "@/lib/timetable"
 import { ExamTrackerPicker } from "@/components/exam-tracker-picker"
 import type { ExamTimerPreset } from "@/components/exam-timer"
@@ -81,7 +82,10 @@ const AppCommandMenu = lazy(() =>
 )
 
 export default function App() {
-  const [view, setView] = useState<AppView>(() => loadAppView(typeof localStorage === "undefined" ? null : localStorage))
+  const [view, setView] = useState<AppView>(() => loadAppView(
+    typeof localStorage === "undefined" ? null : localStorage,
+    typeof location === "undefined" ? "" : location.search,
+  ))
   const [data, setData] = useState<AppData>(() => (typeof localStorage === "undefined" ? EMPTY_APP_DATA : loadAppData()))
   const [timerPreset, setTimerPreset] = useState<ExamTimerPreset | null>(null)
   const [comparisonYear, setComparisonYear] = useState(2025)
@@ -115,6 +119,13 @@ export default function App() {
   }, [data.attempts, data.trackedExamIds, timetable])
 
   useEffect(() => saveAppData(data), [data])
+  useEffect(() => {
+    if (!sync.user) return
+    const flush = () => void flushFocalTimerOutbox()
+    flush()
+    window.addEventListener("online", flush)
+    return () => window.removeEventListener("online", flush)
+  }, [sync.user])
   useEffect(() => saveAppView(typeof localStorage === "undefined" ? null : localStorage, view), [view])
   useEffect(() => {
     const openCommandMenu = (event: KeyboardEvent) => {

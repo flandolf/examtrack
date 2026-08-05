@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase"
+import { focalSupabase } from "@/lib/focal-supabase"
 
 export type FocalTimerKind = "exam" | "sac"
 
@@ -88,8 +88,8 @@ export function resumeFocalTimer(link: FocalTimerLink, now = new Date()): FocalT
 }
 
 async function sendTimerChange(change: PendingTimerChange): Promise<boolean> {
-  if (!supabase) return false
-  const { data: { session } } = await supabase.auth.getSession()
+  if (!focalSupabase) return false
+  const { data: { session } } = await focalSupabase.auth.getSession()
   if (!session) return false
   const { link, operation } = change
   const now = new Date(change.changedAt)
@@ -118,7 +118,7 @@ async function sendTimerChange(change: PendingTimerChange): Promise<boolean> {
     deleted_at: null,
     last_modified_device_id: "examtrack-web",
   }
-  const { error } = await supabase.from("sync_changes").insert({
+  const { error } = await focalSupabase.from("sync_changes").insert({
     user_id: session.user.id,
     change_id: crypto.randomUUID(),
     device_id: "examtrack-web",

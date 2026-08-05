@@ -361,7 +361,7 @@ export function ExamTimer({ references, studies, preferredSubjects, initialExam,
         <Button onClick={openMarking}><Check />Finish & mark</Button>
       </PageHeader>
 
-      {session.focal ? <Alert><Clock3 /><AlertTitle>Focal study logging active</AlertTitle><AlertDescription>Start, pause, resume, and finish are mirrored to Focal when your shared account is online.</AlertDescription></Alert> : null}
+      {session.focal ? <Alert><Clock3 /><AlertTitle>Focal study logging active</AlertTitle><AlertDescription>Timer changes are queued and mirrored when your separate Focal account is connected and online.</AlertDescription></Alert> : null}
 
       <section className="grid gap-6 py-6 text-center">
         <div>

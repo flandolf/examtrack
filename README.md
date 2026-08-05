@@ -2,9 +2,9 @@
 
 ## Focal timer integration
 
-When ExamTrack and Focal use the same Supabase project and account, exam and SAC timers mirror start, pause, resume, completion, and discard transitions into Focal's existing append-only `sync_changes` log. Focal remains the study-history owner; ExamTrack remains the active timer owner.
+ExamTrack and Focal keep separate Supabase projects. In ExamTrack settings, the user connects their Focal account once; exam and SAC timers then mirror start, pause, resume, completion, and discard transitions into Focal's existing append-only `sync_changes` log. Focal remains the study-history owner; ExamTrack remains the active timer owner.
 
-Apply Focal's Supabase migrations to the shared project in addition to ExamTrack's migrations. Both clients use only the publishable key and authenticated row-level-security policies. Timer transitions are queued locally while offline and retried when the account or network returns; no account token or study data is put in the Focal launch URL.
+Set `VITE_FOCAL_SUPABASE_URL` and `VITE_FOCAL_SUPABASE_PUBLISHABLE_KEY` on the ExamTrack Vercel deployment. Do not copy Focal migrations or data into ExamTrack. The second client authenticates directly with Focal and uses only its publishable key plus Focal's row-level-security policies; no service-role key is exposed. Timer transitions are queued locally while offline and retried when the Focal account or network returns; no account token or study data is put in the Focal launch URL.
 
 A local-first VCE practice exam tracker built with React, Vite, shadcn/ui, Recharts, and KaTeX.
 

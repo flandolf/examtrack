@@ -46,6 +46,7 @@ import {
 } from "@/components/app-navigation"
 import { getViewLabel } from "@/lib/navigation"
 import { useReferenceData } from "@/hooks/use-reference-data"
+import { useFocalAccount } from "@/hooks/use-focal-account"
 
 const ExamSheet = lazy(() =>
   import("@/components/exam-sheet").then((module) => ({ default: module.ExamSheet })),
@@ -98,6 +99,7 @@ export default function App() {
   const [commandOpen, setCommandOpen] = useState(false)
   const importInput = useRef<HTMLInputElement>(null)
   const sync = useSupabaseSync(data, setData)
+  const focal = useFocalAccount()
   const {
     references,
     referencesGeneratedAt,
@@ -120,12 +122,12 @@ export default function App() {
 
   useEffect(() => saveAppData(data), [data])
   useEffect(() => {
-    if (!sync.user) return
+    if (!focal.user) return
     const flush = () => void flushFocalTimerOutbox()
     flush()
     window.addEventListener("online", flush)
     return () => window.removeEventListener("online", flush)
-  }, [sync.user])
+  }, [focal.user])
   useEffect(() => saveAppView(typeof localStorage === "undefined" ? null : localStorage, view), [view])
   useEffect(() => {
     const openCommandMenu = (event: KeyboardEvent) => {
@@ -391,7 +393,7 @@ export default function App() {
           {view === "timer" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><ExamTimer key={timerPreset ? `${timerPreset.subject}-${timerPreset.examYear}-${timerPreset.paper}` : "manual"} references={references} studies={resourceStudies} preferredSubjects={data.subjects} initialExam={timerPreset} onSave={(attempt) => { setTimerPreset(null); saveTimedAttempt(attempt) }} /></Suspense> : null}
           {view === "predictor" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><StudyScorePredictor data={data} references={references} scalingReferences={scalingReferences} /></Suspense> : null}
           {view === "vcaa" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><VcaaExplorer references={references} attempts={data.attempts} preferredSubjects={data.subjects} /></Suspense> : null}
-          {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage sync={sync} subjects={[...new Set(references.map((reference) => reference.studyName))]} selectedSubjects={data.subjects} examDifficulty={data.examDifficulty} onSubjectsChange={saveSubjects} onExamDifficultyChange={saveExamDifficulty} /></Suspense> : null}
+          {view === "settings" ? <Suspense fallback={<Skeleton className="h-96 w-full" />}><SettingsPage sync={sync} focal={focal} subjects={[...new Set(references.map((reference) => reference.studyName))]} selectedSubjects={data.subjects} examDifficulty={data.examDifficulty} onSubjectsChange={saveSubjects} onExamDifficultyChange={saveExamDifficulty} /></Suspense> : null}
         </main>
       </SidebarInset>
       {examOpen ? (

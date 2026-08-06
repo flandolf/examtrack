@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { BookOpenCheck, FileDown, NotebookPen, Plus, Search } from "lucide-react"
+import { BookOpenCheck, FileDown, NotebookPen, Plus, Search, Shuffle, SkipForward } from "lucide-react"
 import { toast } from "sonner"
 
 import { MarkdownPreview } from "@/components/markdown-preview"
@@ -161,7 +161,10 @@ function StudyQueue({ mistakes, attempts, studies, onReview, onBrowse }: { mista
   const [now, setNow] = useState(() => new Date())
   const attemptMap = useMemo(() => new Map(attempts.map((attempt) => [attempt.id, attempt])), [attempts])
   const due = getDueMistakes(mistakes, now)
-  const current = due[0]
+  const dueIdKey = due.map((mistake) => mistake.id).join("\u0000")
+  const [queueIds, setQueueIds] = useState(() => due.map((mistake) => mistake.id))
+  const dueMap = new Map(due.map((mistake) => [mistake.id, mistake]))
+  const current = queueIds.map((id) => dueMap.get(id)).find((mistake) => mistake !== undefined)
   const counts = getMistakeQueueCounts(mistakes, now)
   const nextScheduled = mistakes
     .filter((mistake) => !mistake.suspended && !due.some((dueMistake) => dueMistake.id === mistake.id))
@@ -174,10 +177,35 @@ function StudyQueue({ mistakes, attempts, studies, onReview, onBrowse }: { mista
     return () => window.clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    const nextDueIds = dueIdKey ? dueIdKey.split("\u0000") : []
+    const nextDueIdSet = new Set(nextDueIds)
+    setQueueIds((currentIds) => [
+      ...currentIds.filter((id) => nextDueIdSet.has(id)),
+      ...nextDueIds.filter((id) => !currentIds.includes(id)),
+    ])
+  }, [dueIdKey])
+
   function rate(rating: ReviewRating) {
     if (!current) return
     onReview(current, rating)
+    setQueueIds((ids) => ids.filter((id) => id !== current.id))
     setReviewed((value) => value + 1)
+  }
+
+  function shuffleQueue() {
+    setQueueIds((ids) => {
+      const shuffled = [...ids]
+      for (let index = shuffled.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1))
+        ;[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]]
+      }
+      return shuffled
+    })
+  }
+
+  function skipCard() {
+    setQueueIds((ids) => ids.length > 1 ? [...ids.slice(1), ids[0]] : ids)
   }
 
   if (!current) {
@@ -196,9 +224,15 @@ function StudyQueue({ mistakes, attempts, studies, onReview, onBrowse }: { mista
   return (
     <div className="grid gap-4">
       <div className="mx-auto grid w-full max-w-4xl gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <span className="font-medium">Study session</span>
-          <span className="text-muted-foreground">{reviewed} reviewed · {due.length} remaining</span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm">
+            <span className="font-medium">Study session</span>
+            <span className="ml-2 text-muted-foreground">{reviewed} reviewed · {due.length} remaining</span>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={shuffleQueue} disabled={due.length < 2}><Shuffle />Shuffle</Button>
+            <Button size="sm" variant="outline" onClick={skipCard} disabled={due.length < 2}><SkipForward />Skip</Button>
+          </div>
         </div>
         <Progress value={sessionTotal ? reviewed / sessionTotal * 100 : 0} />
         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
